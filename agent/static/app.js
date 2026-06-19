@@ -142,10 +142,22 @@ analyzeButton.addEventListener("click", async () => {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      // fallback when server returns non-JSON error HTML/text
+    }
 
     if (!response.ok) {
-      throw new Error(data.detail || data.message || "Failed to analyze profiles");
+      throw new Error(
+        (data && (data.detail || data.message)) || responseText || "Failed to analyze profiles",
+      );
+    }
+
+    if (!data) {
+      throw new Error("Invalid JSON returned from analyze endpoint.");
     }
 
     setMessage("Analysis complete.", "success");
