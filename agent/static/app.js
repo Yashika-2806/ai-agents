@@ -142,20 +142,12 @@ analyzeButton.addEventListener("click", async () => {
       body: JSON.stringify(payload),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      let errorText = response.statusText;
-      try {
-        const error = await response.json();
-        errorText = error.detail || error.message || JSON.stringify(error);
-      } catch (_parseError) {
-        const text = await response.text();
-        errorText = text || response.statusText;
-      }
-      setMessage(`Error: ${errorText}`, "error");
-      return;
+      throw new Error(data.detail || data.message || "Failed to analyze profiles");
     }
 
-    const data = await response.json();
     setMessage("Analysis complete.", "success");
 
     if (data.profiles && data.profiles.length) {
