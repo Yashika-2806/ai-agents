@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile Scraper</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <h1>Profile Scraper</h1>
+      <p class="hero-subtitle">College-level coding profile analysis for LeetCode, Codeforces, CodeChef, HackerRank, AtCoder, SPOJ, and HackerEarth.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel intro-panel">
+      <div class="project-label">Project: Profile Scraper</div>
+      <h2>Deep coding profile analysis</h2>
+      <p>Paste profile links for supported coding platforms and get a consolidated performance summary for your college project.</p>
+      <div class="supported-tags">Supported platforms: LeetCode · Codeforces · CodeChef · HackerRank · AtCoder · SPOJ · HackerEarth</div>
+      <div class="grid">
+        <div class="input-card">
+          <label for="leetcode">LeetCode</label>
+          <textarea id="leetcode" placeholder="https://leetcode.com/username" rows="2"></textarea>
+        </div>
+        <div class="input-card">
+          <label for="codeforces">Codeforces</label>
+          <textarea id="codeforces" placeholder="https://codeforces.com/profile/username" rows="2"></textarea>
+        </div>
+        <div class="input-card">
+          <label for="codechef">CodeChef</label>
+          <textarea id="codechef" placeholder="https://www.codechef.com/users/username" rows="2"></textarea>
+        </div>
+        <div class="input-card">
+          <label for="hackerrank">HackerRank</label>
+          <textarea id="hackerrank" placeholder="https://www.hackerrank.com/username" rows="2"></textarea>
+        </div>
+        <div class="input-card">
+          <label for="atcoder">AtCoder</label>
+          <textarea id="atcoder" placeholder="https://atcoder.jp/users/username" rows="2"></textarea>
+        </div>
+        <div class="input-card">
+          <label for="spoj">SPOJ</label>
+          <textarea id="spoj" placeholder="https://www.spoj.com/users/username" rows="2"></textarea>
+        </div>
+        <div class="input-card">
+          <label for="hackerearth">HackerEarth</label>
+          <textarea id="hackerearth" placeholder="https://www.hackerearth.com/user/username" rows="2"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="analyze">Analyze Profiles</button>
+      <p class="hint">Use at least one profile link. The analyzer supports partial profiles.</p>
+    </div>
+
+    <section class="results">
+      <div class="results-header">
+        <div>
+          <h2>Results</h2>
+          <p class="subtitle">Profile metrics and evaluation summary appear here.</p>
+        </div>
+      </div>
+      <div id="message" class="message info">Paste links above and click Analyze.</div>
+      <div id="result-grid" class="result-grid"></div>
+      <div id="evaluation" class="evaluation-grid"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
