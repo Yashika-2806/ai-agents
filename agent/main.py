@@ -11,7 +11,7 @@ from httpx import RequestError
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from graphql import GraphQLSchema, GraphQLObjectType, GraphQLField, GraphQLString, GraphQLFloat, GraphQLInt, GraphQLList, GraphQLNonNull, graphql_sync
@@ -21,6 +21,12 @@ load_dotenv()
 app = FastAPI(title="Profile Scraper")
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 @app.get("/", response_class=FileResponse)
 async def root():
@@ -81,11 +87,13 @@ async def fetch_html(url: str) -> str:
 async def fetch_codeforces_profile_html(url: str) -> str:
     loop = asyncio.get_running_loop()
     def sync_fetch():
-        scraper = cloudscraper.create_scraper()
-        r = scraper.get(url, timeout=30)
-        if r.status_code != 200:
-            raise HTTPException(status_code=502, detail=f"Codeforces page fetch failed: {r.status_code}")
-        return r.text
+        try:
+            scraper = cloudscraper.create_scraper()
+            r = scraper.get(url, timeout=30)
+            r.raise_for_status()
+            return r.text
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Error fetching Codeforces profile HTML: {exc}") from exc
     return await loop.run_in_executor(None, sync_fetch)
 
 async def fetch_leetcode_profile(username: str) -> Dict[str, Any]:
@@ -183,7 +191,11 @@ async def fetch_codeforces_status(handle: str) -> Dict[str, Any]:
                     detail=f"Failed to fetch Codeforces submissions: {response.status_code} {response.reason_phrase}",
                 )
 
-            data = response.json()
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise HTTPException(status_code=502, detail="Invalid Codeforces submissions response") from exc
+
             if data.get("status") != "OK":
                 raise HTTPException(status_code=502, detail=f"Codeforces API error: {data.get('comment')}")
 
@@ -230,7 +242,11 @@ async def fetch_codeforces_user(handle: str) -> Dict[str, Any]:
                 detail=f"Failed to fetch Codeforces user info: {response.status_code} {response.reason_phrase}",
             )
 
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail="Invalid Codeforces user info response") from exc
+
         if data.get("status") != "OK":
             raise HTTPException(status_code=502, detail=f"Codeforces API error: {data.get('comment')}")
 
