@@ -226,8 +226,16 @@ async def fetch_codeforces_status(handle: str) -> Dict[str, Any]:
                     problem = item.get("problem", {})
                     contest_id = problem.get("contestId")
                     index = problem.get("index")
-                    if contest_id and index:
-                        solved_problems.add(f"{contest_id}-{index}")
+                    name = problem.get("name", "")
+                    # Build a unique key: use contestId+index when available,
+                    # otherwise fall back to problem name
+                    if contest_id is not None and index:
+                        key = f"{contest_id}-{index}"
+                    elif name:
+                        key = f"name-{name}"
+                    else:
+                        continue
+                    solved_problems.add(key)
 
             if len(results) < page_size:
                 break
