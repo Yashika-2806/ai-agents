@@ -248,49 +248,33 @@ async def fetch_codeforces_user(handle: str) -> Dict[str, Any]:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://codeforces.com/",
-        "Connection": "keep-alive",
     }
     
-    async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-        try:
-            response = await client.get(url, headers=headers)
-        except RequestError as exc:
-            raise HTTPException(status_code=502, detail=f"Error fetching Codeforces user info for {handle}: {exc}") from exc
-
-        if response.status_code == 403:
-            loop = asyncio.get_running_loop()
-            def retry_with_scraper():
-                try:
-                    scraper = cloudscraper.create_scraper()
-                    r = scraper.get(url, timeout=20, headers=headers)
-                    r.raise_for_status()
-                    return r.json()
-                except Exception:
-                    return None
-            
+    loop = asyncio.get_running_loop()
+    
+    def fetch_with_cloudscraper():
+        import time
+        for attempt in range(3):
             try:
-                result = await loop.run_in_executor(None, retry_with_scraper)
-                if result is not None and result.get("status") == "OK":
-                    return result.get("result", [{}])[0]
+                scraper = cloudscraper.create_scraper()
+                r = scraper.get(url, timeout=20, headers=headers)
+                if r.status_code == 200:
+                    data = r.json()
+                    if data.get("status") == "OK":
+                        return data.get("result", [{}])[0]
+                    return {}
+                if attempt < 2:
+                    time.sleep(1)
             except Exception:
-                pass
-            raise HTTPException(status_code=502, detail=f"Failed to fetch Codeforces user info: {response.status_code} {response.reason_phrase}")
-
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=502,
-                detail=f"Failed to fetch Codeforces user info: {response.status_code} {response.reason_phrase}",
-            )
-
-        try:
-            data = response.json()
-        except ValueError as exc:
-            raise HTTPException(status_code=502, detail="Invalid Codeforces user info response") from exc
-
-        if data.get("status") != "OK":
-            raise HTTPException(status_code=502, detail=f"Codeforces API error: {data.get('comment')}")
-
-        return data.get("result", [{}])[0]
+                if attempt < 2:
+                    time.sleep(1)
+        return {}
+    
+    try:
+        result = await loop.run_in_executor(None, fetch_with_cloudscraper)
+        return result if result else {}
+    except Exception:
+        return {}
 
 
 def parse_codeforces_profile_solved(html: str) -> Optional[int]:
