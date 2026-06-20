@@ -90,8 +90,14 @@ async def fetch_codeforces_profile_html(url: str) -> str:
     loop = asyncio.get_running_loop()
     def sync_fetch():
         try:
-            scraper = cloudscraper.create_scraper()
-            r = scraper.get(url, timeout=30)
+            scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Referer": "https://codeforces.com/",
+            }
+            r = scraper.get(url, timeout=30, headers=headers)
             r.raise_for_status()
             return r.text
         except Exception as exc:
@@ -283,9 +289,9 @@ def parse_codeforces_profile_solved(html: str) -> Optional[int]:
         if generic_match:
             return int(generic_match.group(1).replace(",", ""))
 
-    # Last fallback: raw HTML regex to catch markup variations.
+    # Last fallback: raw HTML block matching.
     html_match = re.search(
-        r"([0-9,]+)\s*problems\s*</div>\s*<div[^>]*>\s*solved\s*for\s*all\s*time",
+        r"<div[^>]*class=[\"'][^\"']*_UserActivityFrame_counterValue[^\"']*[\"'][^>]*>.*?([0-9,]+).*?</div>.*?<div[^>]*class=[\"'][^\"']*_UserActivityFrame_counterDescription[^\"']*[\"'][^>]*>.*?solved\s*for\s*all\s*time.*?</div>",
         html,
         re.IGNORECASE | re.DOTALL,
     )
