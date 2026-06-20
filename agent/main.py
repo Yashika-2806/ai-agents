@@ -271,8 +271,16 @@ def parse_codeforces_profile_solved(html: str) -> Optional[int]:
             if solved_match:
                 return int(solved_match.group(1).replace(",", ""))
 
-    # fallback: look for a generic solved count phrase if the specific description isn't present
-    generic_match = re.search(r"([0-9,]+)\s+problems\s*</div>\s*<div[^>]*>\s*solved for all time", html, re.IGNORECASE)
+    page_text = soup.get_text(separator=" ", strip=True)
+    generic_match = re.search(r"([0-9,]+)\s+problems\s+solved\s+for\s+all\s+time", page_text, re.IGNORECASE)
+    if generic_match:
+        return int(generic_match.group(1).replace(",", ""))
+
+    generic_match = re.search(r"([0-9,]+)\s+problems\s+solved", page_text, re.IGNORECASE)
+    if generic_match:
+        return int(generic_match.group(1).replace(",", ""))
+
+    generic_match = re.search(r"([0-9,]+)\s+solved\s+for\s+all\s+time", page_text, re.IGNORECASE)
     if generic_match:
         return int(generic_match.group(1).replace(",", ""))
 
