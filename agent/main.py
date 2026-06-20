@@ -41,12 +41,14 @@ class ProfileQuery(BaseModel):
     spoj: Optional[str] = None
     hackerearth: Optional[str] = None
 
+from typing import Any, Dict, List, Optional, Union
+
 class ScraperOutput(BaseModel):
     platform: str
     profile_url: str
     solved_count: Optional[int]
     rating: Optional[int]
-    rank: Optional[str]
+    rank: Optional[Union[str, int]]
     percentile: Optional[float]
     contest_rating: Optional[int]
     problems_by_difficulty: Optional[Dict[str, int]]
