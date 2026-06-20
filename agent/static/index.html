@@ -33,13 +33,32 @@
     <p class="tagline">Analyze your competitive programming profiles with AI</p>
   </header>
 
-  <!-- ───── INPUT SECTION ───── -->
-  <main id="input-section" class="section-input">
+  <!-- ───── MAIN LAYOUT ───── -->
+  <div class="app-layout">
+
+    <!-- ───── SIDEBAR (RECORDS) ───── -->
+    <aside class="sidebar glass-card">
+      <h3 class="sidebar-title">📁 Saved Records</h3>
+      <div id="records-list" class="records-list">
+        <!-- Records populated by JS -->
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <!-- ───── INPUT SECTION ───── -->
+      <main id="input-section" class="section-input">
     <div class="glass-card input-card">
       <h2 class="card-title">🔗 Enter Your Profile URLs</h2>
       <p class="card-subtitle">Paste one or more profile links — we'll handle the rest.</p>
 
       <form id="analyze-form" autocomplete="off">
+        <div class="input-group" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <label for="student_name" style="font-size: 1rem; color: #fff;">
+            👤 Student Name <span style="color: #ef4444">*</span>
+          </label>
+          <input id="student_name" type="text" placeholder="e.g. John Doe" required style="font-size: 1rem; padding: 14px 16px;" />
+        </div>
+
         <div class="input-grid">
           <div class="input-group">
             <label for="leetcode">
@@ -145,11 +164,14 @@
     </div>
 
     <!-- AI Analysis -->
-    <div class="glass-card analysis-card">
+    <div class="glass-card analysis-card" id="analysis-card" style="display:none">
       <h3 class="card-title">🤖 AI Analysis</h3>
-      <div id="analysis-content" class="analysis-content"></div>
+      <div id="analysis-content" class="analysis-grid"></div>
     </div>
+
   </section>
+  </div> <!-- main-content -->
+  </div> <!-- app-layout -->
 
   <script src="/static/app.js"></script>
 </body>

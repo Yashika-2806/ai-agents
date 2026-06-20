@@ -94,11 +94,18 @@
   // ── Form submit ──
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const body = {};
+    const body = {
+      student_name: $("#student_name").value.trim()
+    };
     Object.keys(PLATFORMS).forEach((k) => {
       const val = $(`#${k}`).value.trim();
       body[k] = val || null;
     });
+
+    if (!body.student_name) {
+      toast("Student Name is required", "error");
+      return;
+    }
 
     // At least one URL required
     if (Object.values(body).every((v) => !v)) {
@@ -124,6 +131,7 @@
       apiResponse = await res.json();
       renderResults(apiResponse);
       showResults();
+      fetchRecords(); // Refresh sidebar after successful save
     } catch (err) {
       toast(err.message || "Analysis failed. Please try again.", "error");
     } finally {
@@ -134,6 +142,56 @@
 
   // ── Back ──
   btnBack.addEventListener("click", showInput);
+
+  // ── Records Sidebar ──
+  async function fetchRecords() {
+    try {
+      const res = await fetch("/records");
+      const data = await res.json();
+      renderRecordsList(data.records || []);
+    } catch (e) {
+      console.error("Failed to fetch records", e);
+    }
+  }
+
+  function renderRecordsList(records) {
+    const list = $("#records-list");
+    list.innerHTML = "";
+    if (records.length === 0) {
+      list.innerHTML = `<div style="padding: 16px; color: rgba(255,255,255,0.5); font-size: 0.9rem; text-align: center;">No saved records yet.</div>`;
+      return;
+    }
+
+    records.forEach(r => {
+      const el = document.createElement("div");
+      el.className = "record-item";
+      const d = new Date(r.timestamp);
+      const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      el.innerHTML = `
+        <div class="record-name">👤 ${r.name}</div>
+        <div class="record-time">${dateStr}</div>
+      `;
+      el.addEventListener("click", () => loadRecord(r.name));
+      list.appendChild(el);
+    });
+  }
+
+  async function loadRecord(name) {
+    try {
+      const res = await fetch("/records/" + encodeURIComponent(name));
+      if (!res.ok) throw new Error("Failed to load record");
+      const data = await res.json();
+      apiResponse = data;
+      renderResults(data);
+      showResults();
+    } catch (e) {
+      toast(e.message, "error");
+    }
+  }
+
+  // Load records on startup
+  fetchRecords();
+
 
 
   // ── Render results ──

@@ -33,6 +33,7 @@ async def root():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
 class ProfileQuery(BaseModel):
+    student_name: Optional[str] = None
     leetcode: Optional[str] = None
     codeforces: Optional[str] = None
     codechef: Optional[str] = None
@@ -814,6 +815,7 @@ async def analyze_profiles(request: Request):
         raise HTTPException(status_code=422, detail="Request JSON must be an object")
 
     query = ProfileQuery(
+        student_name=payload.get("student_name"),
         leetcode=payload.get("leetcode"),
         codeforces=payload.get("codeforces"),
         codechef=payload.get("codechef"),
@@ -845,7 +847,50 @@ async def analyze_profiles(request: Request):
 
     evaluation = await evaluate_code_metrics(profiles)
     scores, radar, analysis = compute_scores_and_analysis(profiles, evaluation)
-    return ProfileResponse(profiles=profiles, evaluation=evaluation, scores=scores, radar=radar, analysis=analysis)
+    response_data = ProfileResponse(profiles=profiles, evaluation=evaluation, scores=scores, radar=radar, analysis=analysis)
+    
+    if query.student_name:
+        import datetime
+        records = load_records()
+        records[query.student_name] = {
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "data": response_data.dict()
+        }
+        with open(RECORDS_FILE, "w") as f:
+            json.dump(records, f)
+
+    return response_data
+
+RECORDS_FILE = "records.json"
+
+def load_records() -> dict:
+    if os.path.exists(RECORDS_FILE):
+        try:
+            with open(RECORDS_FILE, "r") as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+@app.get("/records")
+async def get_records():
+    records = load_records()
+    # Return list of { name, timestamp } sorted by newest
+    items = []
+    for name, record in records.items():
+        items.append({
+            "name": name,
+            "timestamp": record.get("timestamp", "")
+        })
+    items.sort(key=lambda x: x["timestamp"], reverse=True)
+    return {"records": items}
+
+@app.get("/records/{student_name}", response_model=ProfileResponse)
+async def get_record(student_name: str):
+    records = load_records()
+    if student_name not in records:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return records[student_name]["data"]
 
 schema = GraphQLSchema(
     query=GraphQLObjectType(
