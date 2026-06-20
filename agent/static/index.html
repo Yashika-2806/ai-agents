@@ -3,72 +3,161 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profile Scraper</title>
+  <title>CodeLens AI — Coding Profile Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <header>
-    <div class="hero">
-      <h1>Profile Scraper</h1>
-      <p class="hero-subtitle">College-level coding profile analysis for LeetCode, Codeforces, CodeChef, HackerRank, AtCoder, SPOJ, and HackerEarth.</p>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Ambient background blobs -->
+  <div class="ambient-blob blob-1"></div>
+  <div class="ambient-blob blob-2"></div>
+  <div class="ambient-blob blob-3"></div>
+
+  <!-- ───── HEADER ───── -->
+  <header class="site-header">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" stroke="url(#grad)" stroke-width="2.5" fill="none"/>
+        <path d="M14 15l-5 5 5 5M26 15l5 5-5 5M22 12l-4 16" stroke="url(#grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="grad" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#22d3ee"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+      </svg>
+      <span class="logo-text">Code<span class="accent">Lens</span> AI</span>
     </div>
+    <p class="tagline">Analyze your competitive programming profiles with AI</p>
   </header>
 
-  <main>
-    <section class="panel intro-panel">
-      <div class="project-label">Project: Profile Scraper</div>
-      <h2>Deep coding profile analysis</h2>
-      <p>Paste profile links for supported coding platforms and get a consolidated performance summary for your college project.</p>
-      <div class="supported-tags">Supported platforms: LeetCode · Codeforces · CodeChef · HackerRank · AtCoder · SPOJ · HackerEarth</div>
-      <div class="grid">
-        <div class="input-card">
-          <label for="leetcode">LeetCode</label>
-          <textarea id="leetcode" placeholder="https://leetcode.com/username" rows="2"></textarea>
-        </div>
-        <div class="input-card">
-          <label for="codeforces">Codeforces</label>
-          <textarea id="codeforces" placeholder="https://codeforces.com/profile/username" rows="2"></textarea>
-        </div>
-        <div class="input-card">
-          <label for="codechef">CodeChef</label>
-          <textarea id="codechef" placeholder="https://www.codechef.com/users/username" rows="2"></textarea>
-        </div>
-        <div class="input-card">
-          <label for="hackerrank">HackerRank</label>
-          <textarea id="hackerrank" placeholder="https://www.hackerrank.com/username" rows="2"></textarea>
-        </div>
-        <div class="input-card">
-          <label for="atcoder">AtCoder</label>
-          <textarea id="atcoder" placeholder="https://atcoder.jp/users/username" rows="2"></textarea>
-        </div>
-        <div class="input-card">
-          <label for="spoj">SPOJ</label>
-          <textarea id="spoj" placeholder="https://www.spoj.com/users/username" rows="2"></textarea>
-        </div>
-        <div class="input-card">
-          <label for="hackerearth">HackerEarth</label>
-          <textarea id="hackerearth" placeholder="https://www.hackerearth.com/user/username" rows="2"></textarea>
-        </div>
-      </div>
-    </section>
+  <!-- ───── INPUT SECTION ───── -->
+  <main id="input-section" class="section-input">
+    <div class="glass-card input-card">
+      <h2 class="card-title">🔗 Enter Your Profile URLs</h2>
+      <p class="card-subtitle">Paste one or more profile links — we'll handle the rest.</p>
 
-    <div class="actions">
-      <button id="analyze">Analyze Profiles</button>
-      <p class="hint">Use at least one profile link. The analyzer supports partial profiles.</p>
+      <form id="analyze-form" autocomplete="off">
+        <div class="input-grid">
+          <div class="input-group">
+            <label for="leetcode">
+              <span class="platform-dot" style="--dot:#f59e0b"></span>LeetCode
+            </label>
+            <input id="leetcode" type="text" placeholder="https://leetcode.com/u/username" />
+          </div>
+
+          <div class="input-group">
+            <label for="codeforces">
+              <span class="platform-dot" style="--dot:#3b82f6"></span>Codeforces
+            </label>
+            <input id="codeforces" type="text" placeholder="https://codeforces.com/profile/username" />
+          </div>
+
+          <div class="input-group">
+            <label for="codechef">
+              <span class="platform-dot" style="--dot:#a855f7"></span>CodeChef
+            </label>
+            <input id="codechef" type="text" placeholder="https://www.codechef.com/users/username" />
+          </div>
+
+          <div class="input-group">
+            <label for="hackerrank">
+              <span class="platform-dot" style="--dot:#10b981"></span>HackerRank
+            </label>
+            <input id="hackerrank" type="text" placeholder="https://www.hackerrank.com/profile/username" />
+          </div>
+
+          <div class="input-group">
+            <label for="atcoder">
+              <span class="platform-dot" style="--dot:#06b6d4"></span>AtCoder
+            </label>
+            <input id="atcoder" type="text" placeholder="https://atcoder.jp/users/username" />
+          </div>
+
+          <div class="input-group">
+            <label for="spoj">
+              <span class="platform-dot" style="--dot:#ef4444"></span>SPOJ
+            </label>
+            <input id="spoj" type="text" placeholder="https://www.spoj.com/users/username" />
+          </div>
+
+          <div class="input-group">
+            <label for="hackerearth">
+              <span class="platform-dot" style="--dot:#f97316"></span>HackerEarth
+            </label>
+            <input id="hackerearth" type="text" placeholder="https://www.hackerearth.com/@username" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-analyze" id="btn-analyze">
+          <span class="btn-label">🚀 Analyze Profiles</span>
+          <span class="btn-spinner" id="btn-spinner"></span>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- ───── RESULTS SECTION ───── -->
+  <section id="results-section" class="section-results hidden">
+
+    <!-- Action bar -->
+    <div class="action-bar glass-card">
+      <button class="action-btn" id="btn-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 2.5L4.5 8l6 5.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <div class="action-right">
+        <button class="action-btn" id="btn-copy">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="5" y="5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M3 11V3a2 2 0 012-2h8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+          Copy JSON
+        </button>
+        <button class="action-btn" id="btn-download">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2v9m0 0l3-3m-3 3L5 8M3 13h10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download JSON
+        </button>
+        <button class="action-btn btn-accent" id="btn-pdf">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M10 1v4h4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>
+          Export PDF
+        </button>
+      </div>
     </div>
 
-    <section class="results">
-      <div class="results-header">
-        <div>
-          <h2>Results</h2>
-          <p class="subtitle">Profile metrics and evaluation summary appear here.</p>
+    <!-- Platform Cards -->
+    <h3 class="section-heading">📊 Platform Profiles</h3>
+    <div id="platform-cards" class="platform-grid"></div>
+
+    <!-- Radar + Scores Row -->
+    <div class="radar-scores-row">
+      <!-- Radar Chart -->
+      <div class="glass-card radar-card">
+        <h3 class="card-title">🎯 Skills Radar</h3>
+        <div class="radar-wrap">
+          <canvas id="radar-chart"></canvas>
         </div>
       </div>
-      <div id="message" class="message info">Paste links above and click Analyze.</div>
-      <div id="result-grid" class="result-grid"></div>
-      <div id="evaluation" class="evaluation-grid"></div>
-    </section>
-  </main>
+
+      <!-- Scores Grid -->
+      <div class="glass-card scores-card">
+        <h3 class="card-title">🏆 Scores &amp; Readiness</h3>
+        <div id="scores-grid" class="scores-grid"></div>
+      </div>
+    </div>
+
+    <!-- Evaluation -->
+    <div class="glass-card eval-card" id="eval-card" style="display:none">
+      <h3 class="card-title">🔍 Evaluation</h3>
+      <div id="eval-content"></div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="glass-card analysis-card">
+      <h3 class="card-title">🤖 AI Analysis</h3>
+      <div id="analysis-content" class="analysis-content"></div>
+    </div>
+  </section>
 
   <script src="/static/app.js"></script>
 </body>

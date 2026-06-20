@@ -59,9 +59,34 @@ class CodeEvaluationOutput(BaseModel):
     consistency_score: int = Field(ge=0, le=100, description="Platform consistency score")
     code_red_flags: List[str] = Field(description="Potential issues or low-signal patterns")
 
+class ScoreBreakdown(BaseModel):
+    overall_score: int = Field(ge=0, le=100)
+    dsa_strength: str
+    competitive_programming: str
+    open_source: str
+    interview_readiness: str
+    faang_readiness: str
+
+class SkillsRadar(BaseModel):
+    dsa: int = Field(ge=0, le=100)
+    cp: int = Field(ge=0, le=100)
+    open_source: int = Field(ge=0, le=100)
+    consistency: int = Field(ge=0, le=100)
+    interview: int = Field(ge=0, le=100)
+
+class AIAnalysis(BaseModel):
+    strengths: List[str]
+    weaknesses: List[str]
+    recommended_topics: List[str]
+    next_steps: List[str]
+    personalized_feedback: str
+
 class ProfileResponse(BaseModel):
     profiles: List[ScraperOutput]
     evaluation: CodeEvaluationOutput
+    scores: ScoreBreakdown
+    radar: SkillsRadar
+    analysis: AIAnalysis
 
 async def fetch_html(url: str) -> str:
     headers = {
@@ -349,20 +374,26 @@ async def scrape_codeforces(url: str) -> ScraperOutput:
     if rating is not None:
         percentile = max(0.0, min(100.0, 100.0 - rating / 3500.0 * 100.0))
 
+    # Run both methods and take the best result
+    api_solved = None
+    html_solved = None
+
     try:
         status_info = await fetch_codeforces_status(handle)
         recent_status_distribution = status_info.get("verdict_distribution")
-        solved = status_info.get("solved_count")
+        api_solved = status_info.get("solved_count")
     except Exception:
         recent_status_distribution = None
 
-    # If the API-based solved count didn't work, try HTML scraping as fallback.
-    if solved is None:
-        try:
-            profile_html = await fetch_codeforces_profile_html(f"https://codeforces.com/profile/{handle}")
-            solved = parse_codeforces_profile_solved(profile_html)
-        except Exception:
-            solved = None
+    try:
+        profile_html = await fetch_codeforces_profile_html(f"https://codeforces.com/profile/{handle}")
+        html_solved = parse_codeforces_profile_solved(profile_html)
+    except Exception:
+        html_solved = None
+
+    # Take the higher count since API misses gym/practice problems
+    candidates = [c for c in [api_solved, html_solved] if c is not None]
+    solved = max(candidates) if candidates else None
 
     return ScraperOutput(
         platform="Codeforces",
@@ -600,6 +631,173 @@ async def evaluate_code_metrics(profiles: List[ScraperOutput]) -> CodeEvaluation
         code_red_flags=code_red_flags,
     )
 
+def compute_scores_and_analysis(profiles: List[ScraperOutput], evaluation: CodeEvaluationOutput) -> tuple:
+    """Compute scores, radar, and AI analysis from profile data."""
+    total_solved = sum(p.solved_count or 0 for p in profiles)
+
+    # Difficulty breakdown
+    easy = 0
+    medium = 0
+    hard = 0
+    for p in profiles:
+        if p.problems_by_difficulty:
+            easy += p.problems_by_difficulty.get("Easy", 0)
+            medium += p.problems_by_difficulty.get("Medium", 0)
+            hard += p.problems_by_difficulty.get("Hard", 0)
+
+    # Ratings
+    ratings = [p.rating for p in profiles if p.rating is not None]
+    max_rating = max(ratings) if ratings else 0
+    contest_ratings = [p.contest_rating for p in profiles if p.contest_rating is not None]
+    max_contest = max(contest_ratings) if contest_ratings else 0
+
+    has_cp = any(p.platform in ("Codeforces", "AtCoder", "CodeChef") and p.rating is not None for p in profiles)
+    platform_count = len(profiles)
+
+    # DSA Score (0-100)
+    dsa_score = min(100, int(
+        min(total_solved / 5, 30) +  # up to 30 for solved count (150 = max)
+        min(easy / 3, 10) +           # up to 10 for easy
+        min(medium / 2, 25) +          # up to 25 for medium
+        min(hard * 5, 35)              # up to 35 for hard
+    ))
+
+    # CP Score (0-100)
+    cp_score = 0
+    if has_cp:
+        cp_score = min(100, int(
+            min(max_rating / 35, 50) +      # up to 50 for rating (3500 max)
+            min(max_contest / 35, 30) +     # up to 30 for contest rating
+            min(total_solved / 10, 20)      # up to 20 for volume
+        ))
+
+    # Consistency Score (0-100)
+    consistency = min(100, platform_count * 20 + min(total_solved / 2, 40))
+
+    # Interview Score (0-100)
+    interview_score = min(100, int(
+        min(total_solved / 3, 25) +
+        min(medium * 2, 30) +
+        min(hard * 5, 30) +
+        (15 if total_solved >= 100 else min(total_solved / 7, 15))
+    ))
+
+    # Overall (weighted average)
+    overall = int(dsa_score * 0.35 + cp_score * 0.25 + consistency * 0.15 + interview_score * 0.25)
+
+    # Labels
+    def label(score):
+        if score >= 80: return "excellent"
+        if score >= 60: return "strong"
+        if score >= 40: return "moderate"
+        if score >= 20: return "beginner"
+        return "none"
+
+    def readiness(score):
+        if score >= 75: return "ready"
+        if score >= 50: return "almost_ready"
+        if score >= 25: return "developing"
+        return "not_ready"
+
+    scores = ScoreBreakdown(
+        overall_score=overall,
+        dsa_strength=label(dsa_score),
+        competitive_programming=label(cp_score),
+        open_source="none",  # No GitHub integration yet
+        interview_readiness=readiness(interview_score),
+        faang_readiness=readiness(min(interview_score, dsa_score, cp_score)),
+    )
+
+    radar = SkillsRadar(
+        dsa=dsa_score,
+        cp=cp_score,
+        open_source=0,
+        consistency=int(consistency),
+        interview=interview_score,
+    )
+
+    # AI Analysis
+    strengths = []
+    weaknesses = []
+    recommended_topics = []
+    next_steps = []
+
+    if total_solved > 0:
+        strengths.append("Taking initiative to build coding profiles")
+    if total_solved >= 100:
+        strengths.append(f"Strong problem-solving volume with {total_solved} problems solved")
+    if hard >= 10:
+        strengths.append(f"Good hard problem count ({hard}) shows algorithmic depth")
+    if medium >= 30:
+        strengths.append(f"Solid medium problem practice ({medium} solved)")
+    if max_rating >= 1400:
+        strengths.append(f"Competitive rating of {max_rating} shows contest experience")
+    if platform_count >= 3:
+        strengths.append(f"Active on {platform_count} platforms showing broad engagement")
+    if not strengths:
+        strengths.append("Getting started on the coding journey")
+
+    if hard < 10:
+        weaknesses.append(f"Only {hard} hard problems solved — need more practice with complex algorithms")
+    if not has_cp:
+        weaknesses.append("No competitive programming presence — contests build speed and accuracy")
+    if total_solved < 50:
+        weaknesses.append(f"Low total solved count ({total_solved}) — aim for 150+ for strong foundations")
+    if medium < 20:
+        weaknesses.append(f"Only {medium} medium problems — these are crucial for interview prep")
+
+    weaknesses.append("Limited open source presence — projects demonstrate real-world skills")
+
+    if hard < 10:
+        recommended_topics.append("Dynamic Programming")
+        recommended_topics.append("Graph Algorithms")
+    if medium < 30:
+        recommended_topics.append("Two Pointers and Sliding Window")
+        recommended_topics.append("Binary Search variations")
+    if total_solved < 100:
+        recommended_topics.append("Arrays and Strings fundamentals")
+    recommended_topics.append("System Design")
+    if not has_cp:
+        recommended_topics.append("Contest problem solving strategies")
+
+    if hard < 20:
+        next_steps.append(f"Increase hard problem count from {hard} to {max(hard + 18, 20)}")
+    if total_solved < 150:
+        next_steps.append(f"Push total solved count from {total_solved} toward {total_solved + 50}")
+    if not has_cp:
+        next_steps.append("Start participating in Codeforces or AtCoder contests weekly")
+    elif max_rating < 1400:
+        next_steps.append(f"Push contest rating from {max_rating} toward 1400+")
+    next_steps.append("Start 2-3 meaningful personal projects on GitHub")
+
+    # Build difficulty summary string
+    diff_parts = []
+    if easy: diff_parts.append(f"{easy}E")
+    if medium: diff_parts.append(f"{medium}M")
+    if hard: diff_parts.append(f"{hard}H")
+    diff_str = "/".join(diff_parts) if diff_parts else ""
+    diff_detail = f" ({diff_str})" if diff_str else ""
+
+    platform_names = [p.platform for p in profiles]
+    feedback = f"Your profile shows {total_solved} problems solved{diff_detail} across {', '.join(platform_names)}. "
+
+    if total_solved < 50:
+        feedback += "Focus on building fundamentals through daily practice. Start with easy problems and gradually move to medium."
+    elif total_solved < 150:
+        feedback += "Focus on building fundamentals through regular practice. Prioritize solving more hard problems to build confidence with complex algorithms."
+    else:
+        feedback += "You have solid volume. Focus on quality over quantity — target hard problems and participate in contests to improve speed."
+
+    analysis = AIAnalysis(
+        strengths=strengths,
+        weaknesses=weaknesses,
+        recommended_topics=recommended_topics[:6],
+        next_steps=next_steps[:5],
+        personalized_feedback=feedback,
+    )
+
+    return scores, radar, analysis
+
 @app.post("/analyze", response_model=ProfileResponse)
 async def analyze_profiles(request: Request):
     try:
@@ -641,7 +839,8 @@ async def analyze_profiles(request: Request):
         raise HTTPException(status_code=400, detail="At least one profile URL is required")
 
     evaluation = await evaluate_code_metrics(profiles)
-    return ProfileResponse(profiles=profiles, evaluation=evaluation)
+    scores, radar, analysis = compute_scores_and_analysis(profiles, evaluation)
+    return ProfileResponse(profiles=profiles, evaluation=evaluation, scores=scores, radar=radar, analysis=analysis)
 
 schema = GraphQLSchema(
     query=GraphQLObjectType(
