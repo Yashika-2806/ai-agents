@@ -14,9 +14,10 @@
   const form           = $("#analyze-form");
   const btnAnalyze     = $("#btn-analyze");
   const btnBack        = $("#btn-back");
-  const btnCopy        = $("#btn-copy");
-  const btnDownload    = $("#btn-download");
-  const btnPdf         = $("#btn-pdf");
+
+  const navAnalyze     = $("#nav-analyze");
+  const navRecords     = $("#nav-records");
+  const recordsSection = $("#records-section");
 
   let apiResponse = null;  // store full response for export
 
@@ -79,17 +80,37 @@
   }
 
   // ── Show / hide sections ──
-  function showResults() {
+  function hideAllSections() {
     inputSection.classList.add("hidden");
+    resultsSection.classList.add("hidden");
+    if (recordsSection) recordsSection.classList.add("hidden");
+    if (navAnalyze) navAnalyze.classList.remove("active");
+    if (navRecords) navRecords.classList.remove("active");
+  }
+
+  function showResults() {
+    hideAllSections();
     resultsSection.classList.remove("hidden");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function showInput() {
-    resultsSection.classList.add("hidden");
+    hideAllSections();
     inputSection.classList.remove("hidden");
+    if (navAnalyze) navAnalyze.classList.add("active");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  function showRecords() {
+    hideAllSections();
+    if (recordsSection) recordsSection.classList.remove("hidden");
+    if (navRecords) navRecords.classList.add("active");
+    fetchRecords();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  if (navAnalyze) navAnalyze.addEventListener("click", showInput);
+  if (navRecords) navRecords.addEventListener("click", showRecords);
 
   // ── Form submit ──
   form.addEventListener("submit", async (e) => {
@@ -143,36 +164,50 @@
   // ── Back ──
   btnBack.addEventListener("click", showInput);
 
-  // ── Records Sidebar ──
+  // ── Records Table ──
   async function fetchRecords() {
     try {
       const res = await fetch("/records");
       const data = await res.json();
-      renderRecordsList(data.records || []);
+      renderRecordsTable(data.records || []);
     } catch (e) {
       console.error("Failed to fetch records", e);
     }
   }
 
-  function renderRecordsList(records) {
-    const list = $("#records-list");
-    list.innerHTML = "";
+  function renderRecordsTable(records) {
+    const tbody = $("#records-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
     if (records.length === 0) {
-      list.innerHTML = `<div style="padding: 16px; color: rgba(255,255,255,0.5); font-size: 0.9rem; text-align: center;">No saved records yet.</div>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 30px; color: rgba(255,255,255,0.5);">No records found. Enter a student to get started.</td></tr>`;
       return;
     }
 
     records.forEach(r => {
-      const el = document.createElement("div");
-      el.className = "record-item";
+      const tr = document.createElement("tr");
       const d = new Date(r.timestamp);
-      const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      el.innerHTML = `
-        <div class="record-name">👤 ${r.name}</div>
-        <div class="record-time">${dateStr}</div>
+      const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      
+      tr.innerHTML = `
+        <td style="font-weight: 600;">${r.name}</td>
+        <td style="color: #a1a1aa;">${dateStr}</td>
+        <td><span style="color: ${scoreColor(r.overall_score)}; font-weight:bold;">${r.overall_score || "—"}</span></td>
+        <td><span class="${levelClass(r.dsa_strength)}">${r.dsa_strength || "—"}</span></td>
+        <td><span class="${levelClass(r.cp_level)}">${r.cp_level || "—"}</span></td>
+        <td>${r.leetcode_percentile ? r.leetcode_percentile + "%" : "—"}</td>
+        <td>${r.codeforces || "—"}</td>
+        <td><button class="btn-view" data-name="${r.name}">View Report</button></td>
       `;
-      el.addEventListener("click", () => loadRecord(r.name));
-      list.appendChild(el);
+      tbody.appendChild(tr);
+    });
+
+    // Add click event for view buttons
+    tbody.querySelectorAll(".btn-view").forEach(btn => {
+      btn.addEventListener("click", () => {
+        loadRecord(btn.dataset.name);
+      });
     });
   }
 

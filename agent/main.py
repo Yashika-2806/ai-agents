@@ -875,12 +875,29 @@ def load_records() -> dict:
 @app.get("/records")
 async def get_records():
     records = load_records()
-    # Return list of { name, timestamp } sorted by newest
     items = []
     for name, record in records.items():
+        data = record.get("data", {})
+        scores = data.get("scores", {})
+        eval_data = data.get("evaluation", {})
+        
+        # Try to find Codeforces solved count or rating
+        cf_score = "—"
+        for p in data.get("profiles", []):
+            if p.get("platform") == "Codeforces":
+                cf_score = f"{p.get('solved_count', 0)} solved"
+                if p.get("rating"):
+                    cf_score += f" (Rating: {p.get('rating')})"
+                break
+
         items.append({
             "name": name,
-            "timestamp": record.get("timestamp", "")
+            "timestamp": record.get("timestamp", ""),
+            "overall_score": scores.get("overall_score"),
+            "leetcode_percentile": eval_data.get("leetcode_percentile"),
+            "codeforces": cf_score,
+            "dsa_strength": scores.get("dsa_strength", "").title().replace("_", " "),
+            "cp_level": scores.get("cp_level", "").title().replace("_", " ")
         })
     items.sort(key=lambda x: x["timestamp"], reverse=True)
     return {"records": items}

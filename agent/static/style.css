@@ -97,69 +97,96 @@ body {
   margin-top: 8px;
 }
 
-/* ── MAIN LAYOUT ── */
-.app-layout {
+/* ── NAVIGATION TABS ── */
+.nav-tabs {
   display: flex;
-  gap: 32px;
-  max-width: 1200px;
-  margin: 0 auto;
-  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
-.main-content {
-  flex: 1;
-  min-width: 0;
-}
-
-/* ── SIDEBAR ── */
-.sidebar {
-  width: 280px;
-  position: sticky;
-  top: 32px;
-  max-height: calc(100vh - 64px);
-  overflow-y: auto;
-  padding: 24px;
-}
-
-.sidebar-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.records-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.record-item {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.record-item:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.2);
-}
-
-.record-name {
-  color: #fff;
-  font-weight: 500;
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-}
-
-.record-time {
+.nav-tab {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
   color: #a1a1aa;
-  font-size: 0.8rem;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-tab:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.nav-tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(34,211,238,0.3);
+}
+
+/* ── TABLE STYLES ── */
+.table-card {
+  padding: 24px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.records-table th {
+  padding: 14px 16px;
+  font-weight: 600;
+  color: #a1a1aa;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  white-space: nowrap;
+}
+
+.records-table td {
+  padding: 16px;
+  color: #fff;
+  font-size: 0.95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  vertical-align: middle;
+}
+
+.records-table tbody tr {
+  transition: background 0.2s;
+}
+
+.records-table tbody tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.btn-view {
+  background: rgba(34,211,238,0.1);
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view:hover {
+  background: var(--cyan);
+  color: #000;
 }
 
 /* ── Sections ── */

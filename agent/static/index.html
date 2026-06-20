@@ -33,20 +33,14 @@
     <p class="tagline">Analyze your competitive programming profiles with AI</p>
   </header>
 
-  <!-- ───── MAIN LAYOUT ───── -->
-  <div class="app-layout">
+  <!-- ───── NAVIGATION TABS ───── -->
+  <nav class="nav-tabs">
+    <button id="nav-analyze" class="nav-tab active">🔍 New Analysis</button>
+    <button id="nav-records" class="nav-tab">📁 Student Records</button>
+  </nav>
 
-    <!-- ───── SIDEBAR (RECORDS) ───── -->
-    <aside class="sidebar glass-card">
-      <h3 class="sidebar-title">📁 Saved Records</h3>
-      <div id="records-list" class="records-list">
-        <!-- Records populated by JS -->
-      </div>
-    </aside>
-
-    <div class="main-content">
-      <!-- ───── INPUT SECTION ───── -->
-      <main id="input-section" class="section-input">
+  <!-- ───── INPUT SECTION ───── -->
+  <main id="input-section" class="section-input">
     <div class="glass-card input-card">
       <h2 class="card-title">🔗 Enter Your Profile URLs</h2>
       <p class="card-subtitle">Paste one or more profile links — we'll handle the rest.</p>
@@ -170,8 +164,32 @@
     </div>
 
   </section>
-  </div> <!-- main-content -->
-  </div> <!-- app-layout -->
+
+  <!-- ───── RECORDS SECTION ───── -->
+  <section id="records-section" class="section-records hidden">
+    <div class="glass-card table-card">
+      <h2 class="card-title">📁 Saved Student Records</h2>
+      <div class="table-responsive">
+        <table class="records-table">
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Analyzed On</th>
+              <th>Overall Score</th>
+              <th>DSA Strength</th>
+              <th>CP Level</th>
+              <th>LeetCode %ile</th>
+              <th>Codeforces</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="records-tbody">
+            <!-- Records populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
   <script src="/static/app.js"></script>
 </body>
