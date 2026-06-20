@@ -257,13 +257,14 @@ async def fetch_codeforces_user(handle: str) -> Dict[str, Any]:
 
 def parse_codeforces_profile_solved(html: str) -> Optional[int]:
     soup = BeautifulSoup(html, "html.parser")
-    counters = soup.find_all("div", class_=lambda cls: cls and "_UserActivityFrame_counter" in cls)
+    counter_blocks = soup.select("div._UserActivityFrame_counter")
 
-    for counter in counters:
-        description_tag = counter.find("div", class_=lambda cls: cls and "_UserActivityFrame_counterDescription" in cls)
-        value_tag = counter.find("div", class_=lambda cls: cls and "_UserActivityFrame_counterValue" in cls)
+    for block in counter_blocks:
+        description_tag = block.select_one("div._UserActivityFrame_counterDescription")
+        value_tag = block.select_one("div._UserActivityFrame_counterValue")
         if not description_tag or not value_tag:
             continue
+
         description = description_tag.get_text(strip=True).lower()
         if "solved for all time" in description or "solved all time" in description:
             solved_text = value_tag.get_text(strip=True)
@@ -271,18 +272,25 @@ def parse_codeforces_profile_solved(html: str) -> Optional[int]:
             if solved_match:
                 return int(solved_match.group(1).replace(",", ""))
 
+    # Broad fallback against normalized text.
     page_text = soup.get_text(separator=" ", strip=True)
-    generic_match = re.search(r"([0-9,]+)\s+problems\s+solved\s+for\s+all\s+time", page_text, re.IGNORECASE)
-    if generic_match:
-        return int(generic_match.group(1).replace(",", ""))
+    for pattern in [
+        r"([0-9,]+)\s+problems\s+solved\s+for\s+all\s+time",
+        r"([0-9,]+)\s+solved\s+for\s+all\s+time",
+        r"([0-9,]+)\s+problems\s+solved",
+    ]:
+        generic_match = re.search(pattern, page_text, re.IGNORECASE)
+        if generic_match:
+            return int(generic_match.group(1).replace(",", ""))
 
-    generic_match = re.search(r"([0-9,]+)\s+problems\s+solved", page_text, re.IGNORECASE)
-    if generic_match:
-        return int(generic_match.group(1).replace(",", ""))
-
-    generic_match = re.search(r"([0-9,]+)\s+solved\s+for\s+all\s+time", page_text, re.IGNORECASE)
-    if generic_match:
-        return int(generic_match.group(1).replace(",", ""))
+    # Last fallback: raw HTML regex to catch markup variations.
+    html_match = re.search(
+        r"([0-9,]+)\s*problems\s*</div>\s*<div[^>]*>\s*solved\s*for\s*all\s*time",
+        html,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if html_match:
+        return int(html_match.group(1).replace(",", ""))
 
     return None
 
