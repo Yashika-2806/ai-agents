@@ -120,8 +120,14 @@
       <!-- Radar Chart -->
       <div class="glass-card radar-card">
         <h3 class="card-title">📊 Skills Overview</h3>
-        <div class="radar-wrap">
-          <canvas id="radar-chart"></canvas>
+        <div class="charts-stack">
+          <div class="radar-wrap">
+            <canvas id="radar-chart"></canvas>
+          </div>
+          <div class="radar-wrap" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem; height: 220px;">
+            <h4 style="font-size: 0.9rem; color: #a1a1aa; margin-bottom: 1rem; text-align: center; font-weight: 500;">Problem Difficulty Breakdown</h4>
+            <canvas id="difficulty-chart"></canvas>
+          </div>
         </div>
       </div>
 

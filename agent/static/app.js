@@ -140,6 +140,7 @@
   function renderResults(data) {
     renderPlatformCards(data.profiles || []);
     renderRadar(data.radar || {});
+    renderDifficulty(data.profiles || []);
     renderScores(data.scores || {});
     renderEvaluation(data.evaluation || {});
     renderAnalysis(data.analysis || {});
@@ -258,6 +259,66 @@
           legend: { display: false },
         },
       },
+    });
+  }
+
+  // ── Difficulty Doughnut Chart ──
+  let diffChart = null;
+  function renderDifficulty(profiles) {
+    const ctx = $("#difficulty-chart").getContext("2d");
+    if (diffChart) diffChart.destroy();
+
+    let easy = 0, medium = 0, hard = 0;
+    profiles.forEach(p => {
+      if (p.problems_by_difficulty) {
+        easy += p.problems_by_difficulty.Easy || 0;
+        medium += p.problems_by_difficulty.Medium || 0;
+        hard += p.problems_by_difficulty.Hard || 0;
+      }
+    });
+
+    // If no data, just show a grey ring or nothing. But let's handle zero case
+    const hasData = easy + medium + hard > 0;
+    
+    diffChart = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: ["Easy", "Medium", "Hard"],
+        datasets: [{
+          data: hasData ? [easy, medium, hard] : [1],
+          backgroundColor: hasData ? [
+            "rgba(16,185,129,.8)", // Green
+            "rgba(245,158,11,.8)", // Yellow
+            "rgba(239,68,68,.8)"   // Red
+          ] : ["rgba(255,255,255,0.05)"],
+          borderWidth: 0,
+          hoverOffset: 4
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "70%",
+        plugins: {
+          legend: {
+            position: "right",
+            labels: {
+              color: "rgba(255,255,255,.7)",
+              font: { size: 12, family: "'Inter', sans-serif" },
+              usePointStyle: true,
+              padding: 20
+            }
+          },
+          tooltip: {
+            enabled: hasData,
+            backgroundColor: "rgba(0,0,0,0.8)",
+            padding: 10,
+            cornerRadius: 8,
+            titleFont: { size: 13 },
+            bodyFont: { size: 14, weight: "bold" }
+          }
+        }
+      }
     });
   }
 
