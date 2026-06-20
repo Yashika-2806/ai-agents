@@ -344,13 +344,13 @@ async def scrape_codeforces(url: str) -> ScraperOutput:
     try:
         profile_html = await fetch_codeforces_profile_html(f"https://codeforces.com/profile/{handle}")
         solved = parse_codeforces_profile_solved(profile_html)
-    except HTTPException:
+    except Exception:
         solved = None
 
     try:
         status_info = await fetch_codeforces_status(handle)
         recent_status_distribution = status_info.get("verdict_distribution")
-    except HTTPException:
+    except Exception:
         recent_status_distribution = None
 
     return ScraperOutput(
