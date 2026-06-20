@@ -135,153 +135,6 @@
   // ── Back ──
   btnBack.addEventListener("click", showInput);
 
-  // ── Copy JSON ──
-  btnCopy.addEventListener("click", () => {
-    if (!apiResponse) return;
-    navigator.clipboard.writeText(JSON.stringify(apiResponse, null, 2))
-      .then(() => toast("JSON copied to clipboard!"))
-      .catch(() => toast("Copy failed.", "error"));
-  });
-
-  // ── Download JSON ──
-  btnDownload.addEventListener("click", () => {
-    if (!apiResponse) return;
-    const blob = new Blob([JSON.stringify(apiResponse, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "codelens_report.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast("JSON downloaded!");
-  });
-
-  // ── Export PDF ──
-  btnPdf.addEventListener("click", () => {
-    if (!apiResponse) return;
-    try {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const margin = 20;
-      let y = margin;
-      const pw = doc.internal.pageSize.getWidth() - margin * 2;
-
-      const addPage = () => { doc.addPage(); y = margin; };
-      const checkY = (needed = 14) => { if (y + needed > doc.internal.pageSize.getHeight() - margin) addPage(); };
-
-      // Title
-      doc.setFontSize(22);
-      doc.setFont(undefined, "bold");
-      doc.text("CodeLens AI Report", margin, y);
-      y += 10;
-      doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
-      doc.setTextColor(120);
-      doc.text(`Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, margin, y);
-      y += 14;
-      doc.setDrawColor(200);
-      doc.line(margin, y, margin + pw, y);
-      y += 10;
-      doc.setTextColor(40);
-
-      // Profiles
-      if (apiResponse.profiles?.length) {
-        doc.setFontSize(14);
-        doc.setFont(undefined, "bold");
-        doc.text("Platform Profiles", margin, y);
-        y += 8;
-        apiResponse.profiles.forEach((p) => {
-          checkY(30);
-          doc.setFontSize(11);
-          doc.setFont(undefined, "bold");
-          doc.text(`${p.platform}`, margin + 2, y);
-          y += 6;
-          doc.setFontSize(9);
-          doc.setFont(undefined, "normal");
-          const lines = [
-            `Solved: ${fmt(p.solved_count)}`,
-            p.rating != null ? `Rating: ${fmt(p.rating)}` : null,
-            p.rank != null ? `Rank: ${fmt(p.rank)}` : null,
-            p.percentile != null ? `Percentile: ${p.percentile}%` : null,
-          ].filter(Boolean);
-          lines.forEach((l) => { checkY(); doc.text(l, margin + 6, y); y += 5; });
-          if (p.problems_by_difficulty) {
-            const d = p.problems_by_difficulty;
-            const diffStr = Object.entries(d).filter(([k]) => k !== "All").map(([k, v]) => `${k}: ${v}`).join("  |  ");
-            if (diffStr) { checkY(); doc.text(`Difficulty: ${diffStr}`, margin + 6, y); y += 5; }
-          }
-          y += 4;
-        });
-        y += 4;
-      }
-
-      // Scores
-      if (apiResponse.scores) {
-        checkY(30);
-        doc.setFontSize(14);
-        doc.setFont(undefined, "bold");
-        doc.text("Scores", margin, y);
-        y += 8;
-        doc.setFontSize(10);
-        doc.setFont(undefined, "normal");
-        const s = apiResponse.scores;
-        const items = [
-          ["Overall Score", fmt(s.overall_score)],
-          ["DSA Strength", s.dsa_strength],
-          ["Competitive Programming", s.competitive_programming],
-          ["Open Source", s.open_source],
-          ["Interview Readiness", s.interview_readiness],
-          ["FAANG Readiness", s.faang_readiness],
-        ];
-        items.forEach(([k, v]) => { checkY(); doc.text(`${k}: ${v || "—"}`, margin + 4, y); y += 6; });
-        y += 6;
-      }
-
-      // Analysis
-      if (apiResponse.analysis) {
-        const a = apiResponse.analysis;
-        const sections = [
-          ["Strengths", a.strengths],
-          ["Weaknesses", a.weaknesses],
-          ["Recommended Topics", a.recommended_topics],
-          ["Next Steps", a.next_steps],
-        ];
-        sections.forEach(([title, items]) => {
-          if (!items?.length) return;
-          checkY(20);
-          doc.setFontSize(12);
-          doc.setFont(undefined, "bold");
-          doc.text(title, margin, y);
-          y += 7;
-          doc.setFontSize(9);
-          doc.setFont(undefined, "normal");
-          items.forEach((item) => {
-            checkY();
-            const wrapped = doc.splitTextToSize(`• ${item}`, pw - 8);
-            wrapped.forEach((line) => { checkY(); doc.text(line, margin + 6, y); y += 5; });
-          });
-          y += 4;
-        });
-
-        if (a.personalized_feedback) {
-          checkY(20);
-          doc.setFontSize(12);
-          doc.setFont(undefined, "bold");
-          doc.text("Personalized Feedback", margin, y);
-          y += 7;
-          doc.setFontSize(9);
-          doc.setFont(undefined, "normal");
-          const wrapped = doc.splitTextToSize(a.personalized_feedback, pw - 4);
-          wrapped.forEach((line) => { checkY(); doc.text(line, margin + 4, y); y += 5; });
-        }
-      }
-
-      doc.save("codelens_report.pdf");
-      toast("PDF exported!");
-    } catch (err) {
-      console.error(err);
-      toast("PDF export failed.", "error");
-    }
-  });
 
   // ── Render results ──
   function renderResults(data) {
@@ -353,7 +206,7 @@
     return `<div class="stat-item"><div class="stat-label">${label}</div><div class="stat-value${isSmall ? " small" : ""}">${value}</div></div>`;
   }
 
-  // ── Radar chart ──
+  // ── Bar chart ──
   let radarChart = null;
   function renderRadar(radar) {
     const ctx = $("#radar-chart").getContext("2d");
@@ -369,42 +222,37 @@
     ];
 
     radarChart = new Chart(ctx, {
-      type: "radar",
+      type: "bar",
       data: {
         labels,
         datasets: [{
           label: "Skill Level",
           data: values,
-          backgroundColor: "rgba(34,211,238,.12)",
-          borderColor: "rgba(34,211,238,.7)",
-          pointBackgroundColor: "#22d3ee",
-          pointBorderColor: "#fff",
-          pointBorderWidth: 1,
-          pointRadius: 4,
-          borderWidth: 2,
-          fill: true,
+          backgroundColor: [
+            "rgba(34,211,238,.7)",
+            "rgba(59,130,246,.7)",
+            "rgba(168,85,247,.7)",
+            "rgba(16,185,129,.7)",
+            "rgba(245,158,11,.7)"
+          ],
+          borderWidth: 0,
+          borderRadius: 4
         }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: true,
         scales: {
-          r: {
+          y: {
             beginAtZero: true,
             max: 100,
-            ticks: {
-              stepSize: 20,
-              color: "rgba(255,255,255,.25)",
-              backdropColor: "transparent",
-              font: { size: 10 },
-            },
-            grid: { color: "rgba(255,255,255,.06)" },
-            angleLines: { color: "rgba(255,255,255,.06)" },
-            pointLabels: {
-              color: "rgba(255,255,255,.7)",
-              font: { size: 12, weight: "600", family: "Inter" },
-            },
+            ticks: { color: "rgba(255,255,255,.5)" },
+            grid: { color: "rgba(255,255,255,.05)" }
           },
+          x: {
+            ticks: { color: "rgba(255,255,255,.8)" },
+            grid: { display: false }
+          }
         },
         plugins: {
           legend: { display: false },

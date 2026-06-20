@@ -112,30 +112,35 @@ async def fetch_html(url: str) -> str:
         return response.text
 
 async def fetch_codeforces_profile_html(url: str) -> str:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://codeforces.com/",
+    }
+
+    try:
+        from curl_cffi import requests as cffi_requests
+        async with cffi_requests.AsyncSession(impersonate="chrome110") as session:
+            response = await session.get(url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                return response.text
+            raise HTTPException(status_code=502, detail=f"curl_cffi failed with {response.status_code}")
+    except ImportError:
+        pass
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Error fetching CF profile: {exc}")
+
+    # Fallback if curl_cffi not available
     loop = asyncio.get_running_loop()
     def sync_fetch():
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://codeforces.com/",
-        }
-
         try:
             scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
             r = scraper.get(url, timeout=30, headers=headers)
             r.raise_for_status()
             return r.text
         except Exception as primary_exc:
-            try:
-                with httpx.Client(timeout=30.0, follow_redirects=True) as client:
-                    response = client.get(url, headers=headers)
-                    if response.status_code == 200:
-                        return response.text
-                    primary_message = f"cloudscraper failed and direct fetch returned {response.status_code} {response.reason_phrase}"
-            except Exception as fallback_exc:
-                primary_message = f"cloudscraper failed ({primary_exc}) and direct fetch failed ({fallback_exc})"
-            raise HTTPException(status_code=502, detail=f"Error fetching Codeforces profile HTML: {primary_message}") from primary_exc
+            raise HTTPException(status_code=502, detail=f"cloudscraper failed ({primary_exc})") from primary_exc
 
     return await loop.run_in_executor(None, sync_fetch)
 

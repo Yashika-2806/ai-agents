@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CodeLens AI — Coding Profile Analyzer</title>
+  <title>DevStats AI — Coding Profile Analyzer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -103,24 +102,11 @@
   <!-- ───── RESULTS SECTION ───── -->
   <section id="results-section" class="section-results hidden">
 
-    <!-- Action bar -->
-    <div class="action-bar glass-card">
-      <button class="action-btn" id="btn-back">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 2.5L4.5 8l6 5.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Back
-      </button>
-      <div class="action-right">
-        <button class="action-btn" id="btn-copy">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="5" y="5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M3 11V3a2 2 0 012-2h8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
-          Copy JSON
-        </button>
-        <button class="action-btn" id="btn-download">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2v9m0 0l3-3m-3 3L5 8M3 13h10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Download JSON
-        </button>
-        <button class="action-btn btn-accent" id="btn-pdf">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M10 1v4h4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>
-          Export PDF
+    <div class="results-header">
+      <div style="flex: 1;">
+        <button class="action-btn" id="btn-back">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 2.5L4.5 8l6 5.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
         </button>
       </div>
     </div>
@@ -133,7 +119,7 @@
     <div class="radar-scores-row">
       <!-- Radar Chart -->
       <div class="glass-card radar-card">
-        <h3 class="card-title">🎯 Skills Radar</h3>
+        <h3 class="card-title">📊 Skills Overview</h3>
         <div class="radar-wrap">
           <canvas id="radar-chart"></canvas>
         </div>
