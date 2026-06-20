@@ -342,16 +342,19 @@ async def scrape_codeforces(url: str) -> ScraperOutput:
         percentile = max(0.0, min(100.0, 100.0 - rating / 3500.0 * 100.0))
 
     try:
-        profile_html = await fetch_codeforces_profile_html(f"https://codeforces.com/profile/{handle}")
-        solved = parse_codeforces_profile_solved(profile_html)
-    except Exception:
-        solved = None
-
-    try:
         status_info = await fetch_codeforces_status(handle)
         recent_status_distribution = status_info.get("verdict_distribution")
+        solved = status_info.get("solved_count")
     except Exception:
         recent_status_distribution = None
+
+    # If the API-based solved count didn't work, try HTML scraping as fallback.
+    if solved is None:
+        try:
+            profile_html = await fetch_codeforces_profile_html(f"https://codeforces.com/profile/{handle}")
+            solved = parse_codeforces_profile_solved(profile_html)
+        except Exception:
+            solved = None
 
     return ScraperOutput(
         platform="Codeforces",
