@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/index.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- SheetJS for Excel parsing -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -216,6 +217,122 @@
       </div>
     </div>
     
+    <!-- Analytics Dashboard -->
+    <div id="analytics-dashboard" style="display: none; margin-top: 32px;">
+      <div style="margin-bottom: 24px;">
+        <h2 class="card-title" style="margin-bottom: 4px;">📊 Analytics Dashboard</h2>
+        <p style="color: #a1a1aa; font-size: 0.95rem;">Comprehensive analysis of processed developers</p>
+      </div>
+
+      <!-- Summary Cards -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="glass-card" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; border-top: 3px solid #3b82f6;">
+          <div>
+            <p style="color: #a1a1aa; font-size: 0.85rem; margin-bottom: 8px;">Total Developers</p>
+            <h3 id="stat-total" style="font-size: 1.8rem; margin: 0; font-weight: 700;">0</h3>
+          </div>
+          <div style="color: #3b82f6; opacity: 0.8;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; border-top: 3px solid #f97316;">
+          <div>
+            <p style="color: #a1a1aa; font-size: 0.85rem; margin-bottom: 8px;">Avg LeetCode Score</p>
+            <h3 id="stat-leetcode" style="font-size: 1.8rem; margin: 0; font-weight: 700; color: #f97316;">0</h3>
+          </div>
+          <div style="color: #f97316; opacity: 0.8;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; border-top: 3px solid #a855f7;">
+          <div>
+            <p style="color: #a1a1aa; font-size: 0.85rem; margin-bottom: 8px;">Avg CP Score</p>
+            <h3 id="stat-cp" style="font-size: 1.8rem; margin: 0; font-weight: 700; color: #a855f7;">0</h3>
+          </div>
+          <div style="color: #a855f7; opacity: 0.8;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          </div>
+        </div>
+        <div class="glass-card" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; border-top: 3px solid #10b981;">
+          <div>
+            <p style="color: #a1a1aa; font-size: 0.85rem; margin-bottom: 8px;">Overall Score</p>
+            <h3 id="stat-overall" style="font-size: 1.8rem; margin: 0; font-weight: 700; color: #10b981;">0</h3>
+          </div>
+          <div style="color: #10b981; opacity: 0.8;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribution & Insights -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+        <!-- Left: Distribution progress bars & Key Insights -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <div class="glass-card">
+            <h3 class="card-title" style="margin-bottom: 20px;">🎯 Performance Distribution</h3>
+            <div class="distribution-item">
+              <div class="dist-header">
+                <span>Excellent (90-100)</span>
+                <span id="dist-count-excellent" class="dist-count" style="color: #10b981;">0 devs</span>
+              </div>
+              <div class="dist-bar-bg"><div id="dist-bar-excellent" class="dist-bar" style="background: #10b981; width: 0%;"></div></div>
+            </div>
+            <div class="distribution-item">
+              <div class="dist-header">
+                <span>Good (70-89)</span>
+                <span id="dist-count-good" class="dist-count" style="color: #3b82f6;">0 devs</span>
+              </div>
+              <div class="dist-bar-bg"><div id="dist-bar-good" class="dist-bar" style="background: #3b82f6; width: 0%;"></div></div>
+            </div>
+            <div class="distribution-item">
+              <div class="dist-header">
+                <span>Average (50-69)</span>
+                <span id="dist-count-average" class="dist-count" style="color: #f59e0b;">0 devs</span>
+              </div>
+              <div class="dist-bar-bg"><div id="dist-bar-average" class="dist-bar" style="background: #f59e0b; width: 0%;"></div></div>
+            </div>
+            <div class="distribution-item">
+              <div class="dist-header">
+                <span>Needs Work (<50)</span>
+                <span id="dist-count-needs-work" class="dist-count" style="color: #ef4444;">0 devs</span>
+              </div>
+              <div class="dist-bar-bg"><div id="dist-bar-needs-work" class="dist-bar" style="background: #ef4444; width: 0%;"></div></div>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3 class="card-title" style="margin-bottom: 20px;">💡 Key Insights</h3>
+            <div id="key-insights-container" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Generated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Charts & Visuals -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <div class="glass-card">
+            <h3 class="card-title" style="margin-bottom: 20px;">📊 Performance Breakdown Chart</h3>
+            <div style="height: 220px; position: relative;">
+              <canvas id="bulk-doughnut-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3 class="card-title" style="margin-bottom: 20px;">📈 Platform Solve Averages</h3>
+            <div style="height: 220px; position: relative;">
+              <canvas id="bulk-bar-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Performers -->
+      <h3 class="card-title" style="margin-bottom: 16px;">🏆 Top Performers</h3>
+      <div id="top-performers-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+        <!-- Generated dynamically -->
+      </div>
+    </div>
+
     <!-- Bulk Results Table -->
     <div id="bulk-results-container" class="glass-card table-card" style="display: none; margin-top: 24px;">
       <h3 class="card-title">🏆 Bulk Analysis Results</h3>

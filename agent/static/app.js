@@ -162,16 +162,21 @@
         const queue = [];
         for (let i = 1; i < rows.length; i++) {
           const cols = rows[i].split(",").map(c => c.trim());
-          if (cols.length < headers.length || !cols[studentIdx]) continue;
+          if (!cols[studentIdx]) continue;
           
           const payload = { student_name: cols[studentIdx] };
+          let hasPlatform = false;
           Object.keys(PLATFORMS).forEach(p => {
             const idx = headers.indexOf(p);
-            if (idx !== -1 && cols[idx]) {
+            if (idx !== -1 && idx < cols.length && cols[idx]) {
               payload[p] = cols[idx];
+              hasPlatform = true;
             }
           });
-          queue.push(payload);
+          
+          if (hasPlatform) {
+            queue.push(payload);
+          }
         }
         
         if (queue.length === 0) {
@@ -208,11 +213,15 @@
     });
   }
 
+  let processedResults = [];
+
   async function startBulkProcessing(queue) {
     $("#bulk-dashboard").style.display = "block";
+    $("#analytics-dashboard").style.display = "block";
     $("#bulk-results-container").style.display = "block";
     let processed = 0;
     let total = queue.length;
+    processedResults = [];
     $("#bulk-total").textContent = total;
     $("#bulk-processed").textContent = 0;
     $("#bulk-queued").textContent = total;
@@ -301,6 +310,9 @@
             </td>
           `;
           bulkResults.appendChild(tr);
+          
+          processedResults.push({ name: current.student_name, data: data });
+          updateAnalyticsDashboard();
         } else {
           feedItem.style.background = "rgba(239, 68, 68, 0.2)";
           feedItem.innerHTML = `❌ Failed: <b>${current.student_name}</b>`;
@@ -428,6 +440,8 @@
       toast(e.message, "error");
     }
   }
+
+  window.viewRecord = loadRecord;
 
   // Load records on startup
   fetchRecords();
@@ -618,6 +632,238 @@
         }
       }
     });
+    
+    updateUI();
+  }
+
+  let bulkDoughnutChart = null;
+  let bulkBarChart = null;
+
+  function updateAnalyticsDashboard() {
+    if (processedResults.length === 0) return;
+    
+    // 1. Summary Cards
+    let sumOverall = 0, sumLeetCode = 0, sumCP = 0;
+    let countLC = 0, countCP = 0;
+    
+    let excellent = 0, good = 0, average = 0, needsWork = 0;
+
+    processedResults.forEach(res => {
+      const overall = res.data.scores?.overall_score || 0;
+      sumOverall += overall;
+      
+      // Buckets
+      if (overall >= 90) excellent++;
+      else if (overall >= 70) good++;
+      else if (overall >= 50) average++;
+      else needsWork++;
+
+      const profiles = res.data.profiles || [];
+      profiles.forEach(p => {
+        if (p.platform === "LeetCode") {
+          sumLeetCode += (p.percentile || 0);
+          countLC++;
+        }
+        if (["Codeforces", "CodeChef"].includes(p.platform)) {
+          sumCP += (p.rating || 0);
+          countCP++;
+        }
+      });
+    });
+
+    const total = processedResults.length;
+    $("#stat-total").textContent = total;
+    $("#stat-leetcode").textContent = countLC ? Math.round(sumLeetCode / countLC) : "—";
+    $("#stat-cp").textContent = countCP ? Math.round(sumCP / countCP) : "—";
+    $("#stat-overall").textContent = Math.round(sumOverall / total);
+
+    // 2. Distributions
+    const pct = (val) => Math.round((val / total) * 100) + "%";
+    
+    $("#dist-bar-excellent").style.width = pct(excellent);
+    $("#dist-count-excellent").textContent = `${excellent} devs`;
+    
+    $("#dist-bar-good").style.width = pct(good);
+    $("#dist-count-good").textContent = `${good} devs`;
+    
+    $("#dist-bar-average").style.width = pct(average);
+    $("#dist-count-average").textContent = `${average} devs`;
+    
+    $("#dist-bar-needs-work").style.width = pct(needsWork);
+    $("#dist-count-needs-work").textContent = `${needsWork} devs`;
+
+    // 3. Key Insights
+    const insightsContainer = $("#key-insights-container");
+    insightsContainer.innerHTML = "";
+    
+    const topPerformersPct = Math.round((excellent + good) / total * 100);
+    insightsContainer.innerHTML += `
+      <div class="insight-item" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
+        <div class="insight-icon" style="color: #10b981;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+        <div class="insight-content">
+          <h4>Top Performers</h4>
+          <p>${topPerformersPct}% of developers scored 70+ overall.</p>
+        </div>
+      </div>
+    `;
+
+    if (needsWork > 0) {
+      insightsContainer.innerHTML += `
+        <div class="insight-item" style="background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.2);">
+          <div class="insight-icon" style="color: #f59e0b;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+          <div class="insight-content">
+            <h4>Development Opportunity</h4>
+            <p>${needsWork} developers need support to improve their CP and DSA skills.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // 4. Top Performers Cards
+    const sorted = [...processedResults].sort((a, b) => (b.data.scores?.overall_score || 0) - (a.data.scores?.overall_score || 0)).slice(0, 3);
+    const topContainer = $("#top-performers-container");
+    topContainer.innerHTML = "";
+    
+    sorted.forEach((dev, index) => {
+      let lcStat = "—";
+      let cpStat = "—";
+      dev.data.profiles?.forEach(p => {
+        if (p.platform === "LeetCode") lcStat = p.percentile ? `${p.percentile}%` : "—";
+        if (["Codeforces", "CodeChef"].includes(p.platform) && cpStat === "—") cpStat = p.rating || "—";
+      });
+      
+      const score = dev.data.scores?.overall_score || 0;
+      const rankColor = index === 0 ? "#f59e0b" : index === 1 ? "#94a3b8" : "#d97706";
+      
+      topContainer.innerHTML += `
+        <div class="glass-card" style="padding: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: ${rankColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
+              ${index + 1}
+            </div>
+            <div>
+              <h4 style="margin: 0; font-size: 1.05rem;">${dev.name}</h4>
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.85rem; color: #a1a1aa;">Overall Score</span>
+            <span style="font-weight: bold; color: ${scoreColor(score)}">${fmt(score)}/100</span>
+          </div>
+          <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 12px; overflow: hidden;">
+            <div style="height: 100%; width: ${score}%; background: ${scoreColor(score)}; border-radius: 3px;"></div>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #a1a1aa;">
+            <span>LeetCode: ${lcStat}</span>
+            <span>CP Rating: ${cpStat}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    // 5. Chart.js visual rendering
+    try {
+      const doughnutCtx = $("#bulk-doughnut-chart").getContext("2d");
+      if (bulkDoughnutChart) bulkDoughnutChart.destroy();
+      bulkDoughnutChart = new Chart(doughnutCtx, {
+        type: "doughnut",
+        data: {
+          labels: ["Excellent", "Good", "Average", "Needs Work"],
+          datasets: [{
+            data: [excellent, good, average, needsWork],
+            backgroundColor: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "70%",
+          plugins: {
+            legend: {
+              position: "right",
+              labels: {
+                color: "rgba(255,255,255,.7)",
+                font: { size: 10, family: "'Inter', sans-serif" },
+                usePointStyle: true,
+                padding: 10
+              }
+            }
+          }
+        }
+      });
+    } catch (e) {
+      console.error("Failed to render bulk doughnut chart", e);
+    }
+
+    try {
+      const barCtx = $("#bulk-bar-chart").getContext("2d");
+      if (bulkBarChart) bulkBarChart.destroy();
+      
+      let sumLC_solved = 0, countLC_solved = 0;
+      let sumCF_solved = 0, countCF_solved = 0;
+      let sumCC_solved = 0, countCC_solved = 0;
+      let sumHR_solved = 0, countHR_solved = 0;
+      
+      processedResults.forEach(res => {
+        const profiles = res.data.profiles || [];
+        profiles.forEach(p => {
+          if (p.platform === "LeetCode") {
+            sumLC_solved += (p.solved_count || 0);
+            countLC_solved++;
+          } else if (p.platform === "Codeforces") {
+            sumCF_solved += (p.solved_count || 0);
+            countCF_solved++;
+          } else if (p.platform === "CodeChef") {
+            sumCC_solved += (p.solved_count || 0);
+            countCC_solved++;
+          } else if (p.platform === "HackerRank") {
+            sumHR_solved += (p.solved_count || 0);
+            countHR_solved++;
+          }
+        });
+      });
+      
+      const avgLC = countLC_solved ? Math.round(sumLC_solved / countLC_solved) : 0;
+      const avgCF = countCF_solved ? Math.round(sumCF_solved / countCF_solved) : 0;
+      const avgCC = countCC_solved ? Math.round(sumCC_solved / countCC_solved) : 0;
+      const avgHR = countHR_solved ? Math.round(sumHR_solved / countHR_solved) : 0;
+
+      bulkBarChart = new Chart(barCtx, {
+        type: "bar",
+        data: {
+          labels: ["LeetCode", "Codeforces", "CodeChef", "HackerRank"],
+          datasets: [{
+            label: "Avg Solved",
+            data: [avgLC, avgCF, avgCC, avgHR],
+            backgroundColor: ["#f59e0b", "#3b82f6", "#a855f7", "#10b981"],
+            borderWidth: 0,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: "rgba(255,255,255,.5)", font: { size: 9 } },
+              grid: { color: "rgba(255,255,255,.05)" }
+            },
+            x: {
+              ticks: { color: "rgba(255,255,255,.8)", font: { size: 9 } },
+              grid: { display: false }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    } catch (e) {
+      console.error("Failed to render bulk bar chart", e);
+    }
   }
 
   // ── Scores ──
