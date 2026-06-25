@@ -16,8 +16,10 @@
   const btnBack        = $("#btn-back");
 
   const navAnalyze     = $("#nav-analyze");
+  const navBulk        = $("#nav-bulk");
   const navRecords     = $("#nav-records");
   const recordsSection = $("#records-section");
+  const bulkSection    = $("#bulk-section");
 
   let apiResponse = null;  // store full response for export
 
@@ -84,8 +86,10 @@
     inputSection.classList.add("hidden");
     resultsSection.classList.add("hidden");
     if (recordsSection) recordsSection.classList.add("hidden");
+    if (bulkSection) bulkSection.classList.add("hidden");
     if (navAnalyze) navAnalyze.classList.remove("active");
     if (navRecords) navRecords.classList.remove("active");
+    if (navBulk) navBulk.classList.remove("active");
   }
 
   function showResults() {
@@ -109,8 +113,118 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function showBulk() {
+    hideAllSections();
+    if (bulkSection) bulkSection.classList.remove("hidden");
+    if (navBulk) navBulk.classList.add("active");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   if (navAnalyze) navAnalyze.addEventListener("click", showInput);
   if (navRecords) navRecords.addEventListener("click", showRecords);
+  if (navBulk) navBulk.addEventListener("click", showBulk);
+
+  // ── Bulk Upload Logic ──
+  const csvUpload = $("#csv-upload");
+  if (csvUpload) {
+    csvUpload.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      $("#csv-filename").textContent = "Selected: " + file.name;
+      
+      const text = await file.text();
+      const rows = text.split("\n").map(r => r.trim()).filter(r => r);
+      if (rows.length < 2) {
+        toast("CSV is empty or invalid.", "error");
+        return;
+      }
+      
+      const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
+      const studentIdx = headers.indexOf("student_name");
+      if (studentIdx === -1) {
+        toast("CSV must contain 'student_name' column.", "error");
+        return;
+      }
+
+      const queue = [];
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].split(",").map(c => c.trim());
+        if (cols.length < headers.length) continue;
+        
+        const payload = { student_name: cols[studentIdx] };
+        Object.keys(PLATFORMS).forEach(p => {
+          const idx = headers.indexOf(p);
+          if (idx !== -1 && cols[idx]) {
+            payload[p] = cols[idx];
+          }
+        });
+        queue.push(payload);
+      }
+      
+      startBulkProcessing(queue);
+    });
+  }
+
+  async function startBulkProcessing(queue) {
+    $("#bulk-dashboard").style.display = "block";
+    let processed = 0;
+    let total = queue.length;
+    $("#bulk-total").textContent = total;
+    $("#bulk-processed").textContent = 0;
+    $("#bulk-queued").textContent = total;
+    
+    const liveFeed = $("#live-feed-list");
+    const queueFeed = $("#queue-list");
+    
+    const updateUI = () => {
+      queueFeed.innerHTML = "";
+      queue.forEach((q, i) => {
+        queueFeed.innerHTML += `<div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 4px; font-size: 0.9rem;">⏳ ${q.student_name}</div>`;
+      });
+      $("#bulk-queued").textContent = queue.length;
+      $("#bulk-processed").textContent = processed;
+    };
+    
+    liveFeed.innerHTML = "";
+    updateUI();
+    
+    while (queue.length > 0) {
+      const current = queue.shift();
+      updateUI();
+      
+      const feedItem = document.createElement("div");
+      feedItem.style.background = "rgba(59, 130, 246, 0.2)";
+      feedItem.style.padding = "8px";
+      feedItem.style.borderRadius = "4px";
+      feedItem.style.fontSize = "0.9rem";
+      feedItem.innerHTML = `🔄 Processing: <b>${current.student_name}</b>...`;
+      liveFeed.prepend(feedItem);
+      
+      try {
+        const res = await fetch("/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(current),
+        });
+        
+        if (res.ok) {
+          feedItem.style.background = "rgba(16, 185, 129, 0.2)";
+          feedItem.innerHTML = `✅ Completed: <b>${current.student_name}</b>`;
+        } else {
+          feedItem.style.background = "rgba(239, 68, 68, 0.2)";
+          feedItem.innerHTML = `❌ Failed: <b>${current.student_name}</b>`;
+        }
+      } catch (err) {
+        feedItem.style.background = "rgba(239, 68, 68, 0.2)";
+        feedItem.innerHTML = `❌ Error: <b>${current.student_name}</b>`;
+      }
+      
+      processed++;
+      updateUI();
+    }
+    
+    toast("Bulk processing complete!", "success");
+  }
 
   // ── Form submit ──
   form.addEventListener("submit", async (e) => {

@@ -36,6 +36,7 @@
   <!-- ───── NAVIGATION TABS ───── -->
   <nav class="nav-tabs">
     <button id="nav-analyze" class="nav-tab active">🔍 New Analysis</button>
+    <button id="nav-bulk" class="nav-tab">📂 Bulk Analysis</button>
     <button id="nav-records" class="nav-tab">📁 Student Records</button>
   </nav>
 
@@ -163,6 +164,49 @@
       <div id="analysis-content" class="analysis-grid"></div>
     </div>
 
+  </section>
+
+  <!-- ───── BULK ANALYSIS SECTION ───── -->
+  <section id="bulk-section" class="section-bulk hidden">
+    <div class="glass-card table-card" style="margin-bottom: 24px;">
+      <h2 class="card-title">📂 Upload Developer Profiles (CSV)</h2>
+      <p style="color: #a1a1aa; margin-bottom: 16px;">Upload a CSV file containing headers like <code>student_name, leetcode, codeforces, codechef</code> to analyze multiple profiles at once.</p>
+      <input type="file" id="csv-upload" accept=".csv" style="display: none;" />
+      <button class="btn-analyze" onclick="document.getElementById('csv-upload').click()">
+        <span class="btn-label">Choose CSV File</span>
+      </button>
+      <p id="csv-filename" style="margin-top: 10px; font-size: 0.9rem; color: #10b981;"></p>
+    </div>
+
+    <!-- Live Queue Dashboard -->
+    <div id="bulk-dashboard" class="glass-card" style="display: none;">
+      <h3 class="card-title">🔄 Real-Time Data Feed</h3>
+      <div style="display: flex; gap: 20px; text-align: center; margin-bottom: 20px;">
+        <div style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+          <h4 style="font-size: 0.85rem; color: #a1a1aa;">Processed</h4>
+          <p id="bulk-processed" style="font-size: 1.5rem; font-weight: 700; color: #10b981;">0</p>
+        </div>
+        <div style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+          <h4 style="font-size: 0.85rem; color: #a1a1aa;">Queued</h4>
+          <p id="bulk-queued" style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">0</p>
+        </div>
+        <div style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+          <h4 style="font-size: 0.85rem; color: #a1a1aa;">Total</h4>
+          <p id="bulk-total" style="font-size: 1.5rem; font-weight: 700;">0</p>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 20px;">
+        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+          <h4 style="margin-bottom: 10px; font-size: 0.9rem;">Live Developer Feed</h4>
+          <div id="live-feed-list" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+          <h4 style="margin-bottom: 10px; font-size: 0.9rem;">Next in Queue</h4>
+          <div id="queue-list" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ───── RECORDS SECTION ───── -->
