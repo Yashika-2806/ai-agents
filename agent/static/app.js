@@ -210,6 +210,7 @@
 
   async function startBulkProcessing(queue) {
     $("#bulk-dashboard").style.display = "block";
+    $("#bulk-results-container").style.display = "block";
     let processed = 0;
     let total = queue.length;
     $("#bulk-total").textContent = total;
@@ -218,6 +219,7 @@
     
     const liveFeed = $("#live-feed-list");
     const queueFeed = $("#queue-list");
+    const bulkResults = $("#bulk-results-tbody");
     
     const updateUI = () => {
       queueFeed.innerHTML = "";
@@ -229,6 +231,7 @@
     };
     
     liveFeed.innerHTML = "";
+    bulkResults.innerHTML = "";
     updateUI();
     
     while (queue.length > 0) {
@@ -251,8 +254,31 @@
         });
         
         if (res.ok) {
+          const data = await res.json();
           feedItem.style.background = "rgba(16, 185, 129, 0.2)";
           feedItem.innerHTML = `✅ Completed: <b>${current.student_name}</b>`;
+          
+          const scores = data.scores || {};
+          const evalData = data.evaluation || {};
+          
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td style="font-weight: 500;">${current.student_name}</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="score-pill" style="background: ${scoreColor(scores.overall_score)}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: 0.9rem;">
+                  ${fmt(scores.overall_score)}
+                </div>
+              </div>
+            </td>
+            <td><span class="level-badge ${levelClass(scores.dsa_strength)}">${scores.dsa_strength ? scores.dsa_strength.replace("_", " ").toUpperCase() : "—"}</span></td>
+            <td><span class="level-badge ${levelClass(scores.competitive_programming)}">${scores.competitive_programming ? scores.competitive_programming.replace("_", " ").toUpperCase() : "—"}</span></td>
+            <td>${evalData.leetcode_percentile ? evalData.leetcode_percentile + "%" : "—"}</td>
+            <td>
+              <button class="action-btn" onclick="window.viewRecord('${current.student_name}')">View Details</button>
+            </td>
+          `;
+          bulkResults.appendChild(tr);
         } else {
           feedItem.style.background = "rgba(239, 68, 68, 0.2)";
           feedItem.innerHTML = `❌ Failed: <b>${current.student_name}</b>`;
