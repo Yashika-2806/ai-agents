@@ -132,36 +132,57 @@
       if (!file) return;
       $("#csv-filename").textContent = "Selected: " + file.name;
       
-      const text = await file.text();
-      const rows = text.split("\n").map(r => r.trim()).filter(r => r);
-      if (rows.length < 2) {
-        toast("CSV is empty or invalid.", "error");
-        return;
-      }
-      
-      const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
-      const studentIdx = headers.indexOf("student_name");
-      if (studentIdx === -1) {
-        toast("CSV must contain 'student_name' column.", "error");
-        return;
-      }
+      try {
+        let rows = [];
+        if (file.name.endsWith('.csv')) {
+          const text = await file.text();
+          rows = text.split("\n").map(r => r.trim()).filter(r => r);
+        } else {
+          // Use SheetJS for Excel
+          const arrayBuffer = await file.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const csvText = XLSX.utils.sheet_to_csv(worksheet);
+          rows = csvText.split("\n").map(r => r.trim()).filter(r => r);
+        }
 
-      const queue = [];
-      for (let i = 1; i < rows.length; i++) {
-        const cols = rows[i].split(",").map(c => c.trim());
-        if (cols.length < headers.length) continue;
+        if (rows.length < 2) {
+          toast("File is empty or invalid.", "error");
+          return;
+        }
         
-        const payload = { student_name: cols[studentIdx] };
-        Object.keys(PLATFORMS).forEach(p => {
-          const idx = headers.indexOf(p);
-          if (idx !== -1 && cols[idx]) {
-            payload[p] = cols[idx];
-          }
-        });
-        queue.push(payload);
+        const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
+        const studentIdx = headers.indexOf("student_name");
+        if (studentIdx === -1) {
+          toast("File must contain 'student_name' column.", "error");
+          return;
+        }
+
+        const queue = [];
+        for (let i = 1; i < rows.length; i++) {
+          const cols = rows[i].split(",").map(c => c.trim());
+          if (cols.length < headers.length || !cols[studentIdx]) continue;
+          
+          const payload = { student_name: cols[studentIdx] };
+          Object.keys(PLATFORMS).forEach(p => {
+            const idx = headers.indexOf(p);
+            if (idx !== -1 && cols[idx]) {
+              payload[p] = cols[idx];
+            }
+          });
+          queue.push(payload);
+        }
+        
+        if (queue.length === 0) {
+          toast("No valid profiles found to process.", "error");
+          return;
+        }
+
+        startBulkProcessing(queue);
+      } catch (err) {
+        toast("Failed to read file: " + err.message, "error");
       }
-      
-      startBulkProcessing(queue);
     });
   }
 

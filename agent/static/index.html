@@ -9,6 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS for Excel parsing -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -169,11 +171,11 @@
   <!-- ───── BULK ANALYSIS SECTION ───── -->
   <section id="bulk-section" class="section-bulk hidden">
     <div class="glass-card table-card" style="margin-bottom: 24px;">
-      <h2 class="card-title">📂 Upload Developer Profiles (CSV)</h2>
-      <p style="color: #a1a1aa; margin-bottom: 16px;">Upload a CSV file containing headers like <code>student_name, leetcode, codeforces, codechef</code> to analyze multiple profiles at once.</p>
-      <input type="file" id="csv-upload" accept=".csv" style="display: none;" />
+      <h2 class="card-title">📂 Upload Developer Profiles (CSV/Excel)</h2>
+      <p style="color: #a1a1aa; margin-bottom: 16px;">Upload a CSV or Excel file containing headers like <code>student_name, leetcode, codeforces, codechef</code> to analyze multiple profiles at once.</p>
+      <input type="file" id="csv-upload" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display: none;" />
       <button class="btn-analyze" onclick="document.getElementById('csv-upload').click()">
-        <span class="btn-label">Choose CSV File</span>
+        <span class="btn-label">Choose File</span>
       </button>
       <p id="csv-filename" style="margin-top: 10px; font-size: 0.9rem; color: #10b981;"></p>
     </div>
