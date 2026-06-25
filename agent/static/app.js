@@ -186,6 +186,28 @@
     });
   }
 
+  const btnDownloadTemplate = $("#btn-download-template");
+  if (btnDownloadTemplate) {
+    btnDownloadTemplate.addEventListener("click", () => {
+      const headers = ["student_name", ...Object.keys(PLATFORMS)];
+      const sampleData = ["John Doe", "johndoe", "johndoe", "johndoe", "johndoe", "johndoe", "johndoe", "johndoe"];
+      
+      const csvContent = headers.join(",") + "\n" + sampleData.join(",");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "developer_profiles_template.csv");
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast("Template downloaded successfully!", "success");
+    });
+  }
+
   async function startBulkProcessing(queue) {
     $("#bulk-dashboard").style.display = "block";
     let processed = 0;

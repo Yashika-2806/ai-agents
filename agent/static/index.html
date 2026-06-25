@@ -174,10 +174,16 @@
       <h2 class="card-title">📂 Upload Developer Profiles (CSV/Excel)</h2>
       <p style="color: #a1a1aa; margin-bottom: 16px;">Upload a CSV or Excel file containing headers like <code>student_name, leetcode, codeforces, codechef</code> to analyze multiple profiles at once.</p>
       <input type="file" id="csv-upload" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display: none;" />
-      <button class="btn-analyze" onclick="document.getElementById('csv-upload').click()">
-        <span class="btn-label">Choose File</span>
-      </button>
-      <p id="csv-filename" style="margin-top: 10px; font-size: 0.9rem; color: #10b981;"></p>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+        <button class="btn-analyze" onclick="document.getElementById('csv-upload').click()">
+          <span class="btn-label">Choose File</span>
+        </button>
+        <button id="btn-download-template" class="action-btn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 8px; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zM2 14v-2h12v2H2z"/></svg>
+          Download Template
+        </button>
+      </div>
+      <p id="csv-filename" style="margin-top: 15px; font-size: 0.9rem; color: #10b981; text-align: center;"></p>
     </div>
 
     <!-- Live Queue Dashboard -->
