@@ -261,6 +261,16 @@
           const scores = data.scores || {};
           const evalData = data.evaluation || {};
           
+          let cfScore = "—";
+          const profiles = data.profiles || [];
+          for (const p of profiles) {
+            if (p.platform === "Codeforces") {
+              cfScore = `${p.solved_count || 0} solved`;
+              if (p.rating) cfScore += ` (Rating: ${p.rating})`;
+              break;
+            }
+          }
+          
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td style="font-weight: 500;">${current.student_name}</td>
@@ -274,6 +284,7 @@
             <td><span class="level-badge ${levelClass(scores.dsa_strength)}">${scores.dsa_strength ? scores.dsa_strength.replace("_", " ").toUpperCase() : "—"}</span></td>
             <td><span class="level-badge ${levelClass(scores.competitive_programming)}">${scores.competitive_programming ? scores.competitive_programming.replace("_", " ").toUpperCase() : "—"}</span></td>
             <td>${evalData.leetcode_percentile ? evalData.leetcode_percentile + "%" : "—"}</td>
+            <td>${cfScore}</td>
             <td>
               <button class="action-btn" onclick="window.viewRecord('${current.student_name}')">View Details</button>
             </td>
