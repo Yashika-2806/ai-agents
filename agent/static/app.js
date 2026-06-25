@@ -262,12 +262,23 @@
           const evalData = data.evaluation || {};
           
           let cfScore = "—";
+          let lcScore = "—";
+          let ccScore = "—";
+          let hrScore = "—";
+          
           const profiles = data.profiles || [];
           for (const p of profiles) {
             if (p.platform === "Codeforces") {
               cfScore = `${p.solved_count || 0} solved`;
               if (p.rating) cfScore += ` (Rating: ${p.rating})`;
-              break;
+            } else if (p.platform === "LeetCode") {
+              lcScore = `${p.solved_count || 0} solved`;
+              if (p.percentile) lcScore += ` (${p.percentile}%)`;
+            } else if (p.platform === "CodeChef") {
+              ccScore = `${p.solved_count || 0} solved`;
+              if (p.rating) ccScore += ` (Rating: ${p.rating})`;
+            } else if (p.platform === "HackerRank") {
+              hrScore = `${p.solved_count || 0} solved`;
             }
           }
           
@@ -281,10 +292,10 @@
                 </div>
               </div>
             </td>
-            <td><span class="level-badge ${levelClass(scores.dsa_strength)}">${scores.dsa_strength ? scores.dsa_strength.replace("_", " ").toUpperCase() : "—"}</span></td>
-            <td><span class="level-badge ${levelClass(scores.competitive_programming)}">${scores.competitive_programming ? scores.competitive_programming.replace("_", " ").toUpperCase() : "—"}</span></td>
-            <td>${evalData.leetcode_percentile ? evalData.leetcode_percentile + "%" : "—"}</td>
+            <td>${lcScore}</td>
             <td>${cfScore}</td>
+            <td>${ccScore}</td>
+            <td>${hrScore}</td>
             <td>
               <button class="action-btn" onclick="window.viewRecord('${current.student_name}')">View Details</button>
             </td>
