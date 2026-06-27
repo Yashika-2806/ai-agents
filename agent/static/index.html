@@ -87,6 +87,13 @@
           </div>
 
           <div class="input-group">
+            <label for="geeksforgeeks">
+              <span class="platform-dot" style="--dot:#2f8d46"></span>GeeksForGeeks
+            </label>
+            <input id="geeksforgeeks" type="text" placeholder="https://www.geeksforgeeks.org/user/username" />
+          </div>
+
+          <div class="input-group">
             <label for="atcoder">
               <span class="platform-dot" style="--dot:#06b6d4"></span>AtCoder
             </label>
@@ -159,6 +166,14 @@
     <div class="glass-card eval-card" id="eval-card" style="display:none">
       <h3 class="card-title">🔍 Evaluation</h3>
       <div id="eval-content"></div>
+    </div>
+
+    <!-- CP-Agent Score Breakdown (Explainable AI) -->
+    <div class="glass-card" id="cp-scoring-card" style="display:none; margin-bottom: 24px;">
+      <h3 class="card-title">⚙️ CP-Agent Score Breakdown <span id="cp-score-badge" style="margin-left:12px; font-size:0.85rem; padding:4px 12px; border-radius:99px; background:rgba(168,85,247,0.2); color:#a855f7;"></span></h3>
+      <p style="color:#a1a1aa; font-size:0.9rem; margin-bottom:20px;" id="cp-aggregation-method"></p>
+      <div id="cp-platform-scores" style="display:flex; flex-direction:column; gap:16px;"></div>
+      <div id="cp-overall-reasoning" style="margin-top:16px; padding:14px; background:rgba(255,255,255,0.03); border-radius:10px; border-left:3px solid #a855f7; font-size:0.88rem; color:#d4d4d8; line-height:1.6;"></div>
     </div>
 
     <!-- AI Analysis -->
