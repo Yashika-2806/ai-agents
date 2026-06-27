@@ -25,13 +25,14 @@
 
   // ── Platform metadata ──
   const PLATFORMS = {
-    leetcode:   { label: "LeetCode",   emoji: "🟡", color: "#f59e0b" },
-    codeforces: { label: "Codeforces", emoji: "🔵", color: "#3b82f6" },
-    codechef:   { label: "CodeChef",   emoji: "🟣", color: "#a855f7" },
-    hackerrank: { label: "HackerRank", emoji: "🟢", color: "#10b981" },
-    atcoder:    { label: "AtCoder",    emoji: "🔷", color: "#06b6d4" },
-    spoj:       { label: "SPOJ",       emoji: "🔴", color: "#ef4444" },
-    hackerearth:{ label: "HackerEarth",emoji: "🟠", color: "#f97316" },
+    leetcode:       { label: "LeetCode",      emoji: "🟡", color: "#f59e0b" },
+    codeforces:     { label: "Codeforces",    emoji: "🔵", color: "#3b82f6" },
+    codechef:       { label: "CodeChef",      emoji: "🟣", color: "#a855f7" },
+    hackerrank:     { label: "HackerRank",    emoji: "🟢", color: "#10b981" },
+    geeksforgeeks:  { label: "GeeksForGeeks", emoji: "🌿", color: "#2f8d46" },
+    atcoder:        { label: "AtCoder",       emoji: "🔷", color: "#06b6d4" },
+    spoj:           { label: "SPOJ",          emoji: "🔴", color: "#ef4444" },
+    hackerearth:    { label: "HackerEarth",   emoji: "🟠", color: "#f97316" },
   };
 
   // ── Helpers ──
@@ -455,6 +456,7 @@
     renderDifficulty(data.profiles || []);
     renderScores(data.scores || {});
     renderEvaluation(data.evaluation || {});
+    renderCPScoring(data.cp_scoring || null);
     renderAnalysis(data.analysis || {});
   }
 
@@ -632,8 +634,6 @@
         }
       }
     });
-    
-    updateUI();
   }
 
   let bulkDoughnutChart = null;
@@ -864,6 +864,89 @@
     } catch (e) {
       console.error("Failed to render bulk bar chart", e);
     }
+  }
+
+  // ── CP-Agent Score Breakdown (Explainable AI) ──
+  function renderCPScoring(cpScoring) {
+    const card = document.getElementById('cp-scoring-card');
+    if (!cpScoring || !cpScoring.platform_scores || cpScoring.platform_scores.length === 0) {
+      if (card) card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+
+    const badge = document.getElementById('cp-score-badge');
+    if (badge) {
+      badge.textContent = `${cpScoring.score_tier} · ${cpScoring.final_score}/100`;
+    }
+
+    const methodEl = document.getElementById('cp-aggregation-method');
+    if (methodEl) methodEl.textContent = cpScoring.aggregation_method;
+
+    const reasoningEl = document.getElementById('cp-overall-reasoning');
+    if (reasoningEl) reasoningEl.textContent = cpScoring.overall_reasoning;
+
+    const container = document.getElementById('cp-platform-scores');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const platColors = {
+      LeetCode: '#f59e0b',
+      Codeforces: '#3b82f6',
+      CodeChef: '#a855f7',
+      HackerRank: '#10b981',
+      GeeksForGeeks: '#2f8d46',
+    };
+
+    cpScoring.platform_scores.forEach(ps => {
+      const col = platColors[ps.platform] || '#888';
+      const weightPct = Math.round(ps.weight * 100);
+
+      function subBar(label, sub, emoji) {
+        const sc = sub.score;
+        const barCol = sc >= 70 ? '#10b981' : sc >= 45 ? '#f59e0b' : '#ef4444';
+        return `
+          <div style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.85rem; color:#d4d4d8;">${emoji} ${label}</span>
+              <span style="font-weight:700; color:${barCol};">${sc.toFixed(1)}/100</span>
+            </div>
+            <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; margin-bottom:6px; overflow:hidden;">
+              <div style="height:100%; width:${sc}%; background:${barCol}; border-radius:3px; transition:width 0.6s ease;"></div>
+            </div>
+            <div style="font-size:0.78rem; color:#71717a; line-height:1.5; font-style:italic;">
+              <strong style="color:#a1a1aa; font-style:normal;">Formula:</strong> ${sub.formula}<br/>
+              ${sub.reasoning}
+            </div>
+          </div>
+        `;
+      }
+
+      const el = document.createElement('div');
+      el.style.cssText = `border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px; background:rgba(255,255,255,0.02); position:relative; overflow:hidden;`;
+      el.innerHTML = `
+        <div style="position:absolute; top:0; left:0; width:4px; height:100%; background:${col}; border-radius:12px 0 0 12px;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; padding-left:12px;">
+          <div>
+            <h4 style="margin:0; font-size:1rem; color:#fff;">${ps.platform}</h4>
+            <span style="font-size:0.8rem; color:#71717a;">Weight: ${weightPct}% of final score</span>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:1.6rem; font-weight:800; color:${col};">${ps.platform_score.toFixed(1)}</div>
+            <div style="font-size:0.75rem; color:#71717a;">Platform Score</div>
+          </div>
+        </div>
+        <div style="padding-left:12px;">
+          ${subBar('Clout — Elite Standing & Hard Depth', ps.clout, '🏆')}
+          ${subBar('Consistency — Temporal Habit & Discipline', ps.consistency, '📅')}
+          ${subBar('Velocity — Accuracy & Edge-Case Awareness', ps.velocity, '⚡')}
+        </div>
+        <div style="padding-left:12px; margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.04); border-radius:8px; font-size:0.82rem; color:#a1a1aa;">
+          💬 ${ps.reasoning}
+        </div>
+      `;
+      container.appendChild(el);
+    });
   }
 
   // ── Scores ──
