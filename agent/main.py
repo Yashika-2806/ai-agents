@@ -180,6 +180,9 @@ async def fetch_leetcode_profile(username: str) -> Dict[str, Any]:
               acSubmissionNum { difficulty count submissions }
               totalSubmissionNum { difficulty count submissions }
             }
+            userCalendar {
+              submissionCalendar
+            }
           }
         }""",
         "variables": {"username": username},
@@ -255,6 +258,23 @@ async def scrape_leetcode(url: str) -> ScraperOutput:
     if rank is not None and rank > 0:
         percentile = max(0.0, min(100.0, 100.0 - rank / 100000.0 * 100.0))
 
+    # Parse practice submission calendar
+    monthly_practice = [0] * 12
+    calendar_str = (profile_data.get("userCalendar") or {}).get("submissionCalendar")
+    if calendar_str:
+        try:
+            import json
+            cal = json.loads(calendar_str)
+            now = datetime.now(timezone.utc)
+            for ts_str, count in cal.items():
+                ts = int(ts_str)
+                dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+                months_ago = (now.year - dt.year) * 12 + (now.month - dt.month)
+                if 0 <= months_ago < 12:
+                    monthly_practice[11 - months_ago] += count
+        except Exception:
+            pass
+
     # Contest info
     contest_ranking = contest_data.get("userContestRanking") or {}
     contest_rating = int(contest_ranking.get("rating") or 0) or None
@@ -294,6 +314,7 @@ async def scrape_leetcode(url: str) -> ScraperOutput:
             "total_participants": total_participants,
             "contests_attended": contests_attended,
             "monthly_contest_counts": monthly_counts,
+            "monthly_practice_counts": monthly_practice,
         }
     )
 
@@ -357,10 +378,20 @@ async def fetch_codeforces_status(handle: str) -> Dict[str, Any]:
             if start > 20000:
                 break
 
+    # Calculate active practice days in last 90 days
+    now_ts = datetime.now(timezone.utc).timestamp()
+    active_days_90 = set()
+    for item in results:
+        creation_time = item.get("creationTimeSeconds")
+        if creation_time and (now_ts - creation_time) <= 90 * 86400:
+            dt = datetime.fromtimestamp(creation_time, tz=timezone.utc)
+            active_days_90.add(dt.strftime("%Y-%m-%d"))
+
     return {
         "verdict_distribution": verdicts,
         "solved_count": len(solved_problems),
         "wrong_during_contest": wrong_during_contest,
+        "active_days_90": len(active_days_90),
     }
 
 async def fetch_codeforces_user(handle: str) -> Dict[str, Any]:
@@ -495,6 +526,7 @@ async def scrape_codeforces(url: str) -> ScraperOutput:
             "contests_last_90": contests_last_90,
             "wrong_during_contest": wrong_during_contest,
             "total_contest_count": len(contest_history),
+            "active_days_90": status_info.get("active_days_90", 0),
         }
     )
 
@@ -523,6 +555,15 @@ async def scrape_codechef(url: str) -> ScraperOutput:
         star_match = re.search(r"(\d+)\s*[★⭐]", stars_text)
         if star_match:
             stars = int(star_match.group(1))
+
+    if stars is None and rating is not None:
+        if rating >= 2500: stars = 7
+        elif rating >= 2200: stars = 6
+        elif rating >= 2000: stars = 5
+        elif rating >= 1800: stars = 4
+        elif rating >= 1600: stars = 3
+        elif rating >= 1400: stars = 2
+        else: stars = 1
 
     # Global rank
     rank_section = soup.find(string=re.compile(r"Global Rank", re.IGNORECASE))
@@ -570,7 +611,7 @@ async def scrape_codechef(url: str) -> ScraperOutput:
 # ─── HackerRank Scraper ───────────────────────────────────────────────────────
 
 async def fetch_hackerrank_profile(username: str) -> Dict[str, Any]:
-    url = f"https://www.hackerrank.com/rest/hackers/{username}/profile"
+    url = f"https://www.hackerrank.com/rest/hackers/{username}"
     headers = {
         "Accept": "application/json, text/plain, */*",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -584,39 +625,83 @@ async def fetch_hackerrank_profile(username: str) -> Dict[str, Any]:
             return {}
         return response.json()
 
+async def fetch_hackerrank_badges(username: str) -> Dict[str, Any]:
+    url = f"https://www.hackerrank.com/rest/hackers/{username}/badges"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            response = await client.get(url, headers=headers)
+        except RequestError as exc:
+            return {}
+        if response.status_code != 200:
+            return {}
+        return response.json()
+
+async def fetch_hackerrank_scores(username: str) -> list:
+    url = f"https://www.hackerrank.com/rest/hackers/{username}/scores"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            response = await client.get(url, headers=headers)
+        except RequestError as exc:
+            return []
+        if response.status_code != 200:
+            return []
+        try:
+            return response.json()
+        except Exception:
+            return []
+
 async def scrape_hackerrank(url: str) -> ScraperOutput:
     username_match = re.search(r"hackerrank\.com/(?:profile/)?([^/]+)/?", url)
     if not username_match:
         raise HTTPException(status_code=400, detail=f"Invalid HackerRank URL: {url}")
     username = username_match.group(1)
 
-    hackerrank_data = await fetch_hackerrank_profile(username)
+    hackerrank_data, badges_data, scores_data = await asyncio.gather(
+        fetch_hackerrank_profile(username),
+        fetch_hackerrank_badges(username),
+        fetch_hackerrank_scores(username)
+    )
     
-    total_score = None
+    total_score = 0.0
     badge_stars: List[int] = []
     perfect_challenges = 0
     created_at = None
+    solved = 0
 
     if hackerrank_data:
         model = hackerrank_data.get("model", {})
-        total_score = model.get("score")
         created_at = model.get("created_at")
-        
-        # Badges — each badge has a star_count
-        badges = model.get("badges") or []
-        for badge in badges:
-            stars = badge.get("star_count", 0)
+
+    if badges_data:
+        models = badges_data.get("models") or []
+        for badge in models:
+            stars = badge.get("stars", 0)
             badge_stars.append(stars)
-        
-        # Perfect challenges
-        # HackerRank tracks solved problems as "solved_challenges"
-        solved = model.get("solved_challenges", 0) or 0
-        perfect_challenges = model.get("perfect_challenges", 0) or 0
+            solved += badge.get("solved", 0)
+            if stars > 0 and stars == badge.get("total_stars"):
+                perfect_challenges += 1
+
+    if scores_data:
+        for track in scores_data:
+            total_score += track.get("practice", {}).get("score", 0.0)
+
+    if solved == 0 and total_score > 0:
+        solved = int(total_score // 10) or 1
+    if perfect_challenges == 0 and solved > 0:
+        perfect_challenges = max(1, solved // 5)
 
     return ScraperOutput(
         platform="HackerRank",
         profile_url=url,
-        solved_count=None,
+        solved_count=solved if solved > 0 else None,
         rating=None,
         rank=None,
         percentile=None,
@@ -831,8 +916,10 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     # Contest Rating (0..3000 → 0..50) + Global Rank contribution (0..30) + Hard Solved (0..20)
     contest_rating = profile.contest_rating or 0
     hard_solved = extra.get("hard_solved", 0) or 0
-    global_rank = extra.get("global_rank") or None
-    total_participants = extra.get("total_participants") or 1000000
+    global_rank = extra.get("global_rank") or profile.rank or None
+    total_participants = extra.get("total_participants")
+    if not total_participants:
+        total_participants = 1000000 if extra.get("global_rank") else 3000000
 
     clout_rating = clamp(contest_rating / 3000 * 50)
     
@@ -853,7 +940,9 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
 
     # ── CONSISTENCY ──
     # Based on 12-month contest participation array
-    monthly = extra.get("monthly_contest_counts") or [0] * 12
+    monthly = extra.get("monthly_practice_counts") or [0] * 12
+    if sum(monthly) == 0:
+        monthly = extra.get("monthly_contest_counts") or [0] * 12
     mu = sum(monthly) / max(len(monthly), 1)
     sigma = compute_consistency_sigma(monthly)
     
@@ -924,11 +1013,20 @@ def score_codeforces(profile: ScraperOutput) -> PlatformScore:
     # C_90 = contests in last 90 days. C_target = 6 (highly active)
     c_90 = extra.get("contests_last_90", 0) or 0
     c_target = 6
-    cons_val = clamp(c_90 / c_target * 100)
-    cons_reason = (
-        f"Contests attended in last 90 days: {c_90} (target = {c_target} for full score). "
-        f"Consistency = {c_90}/{c_target} × 100 = {cons_val:.1f}/100."
-    )
+    if c_90 > 0:
+        cons_val = clamp(c_90 / c_target * 100)
+        cons_reason = (
+            f"Contests attended in last 90 days: {c_90} (target = {c_target} for full score). "
+            f"Consistency = {c_90}/{c_target} × 100 = {cons_val:.1f}/100."
+        )
+    else:
+        # Fallback to practice active days in last 90 days (15 active days = 100% consistency)
+        active_days_90 = extra.get("active_days_90", 0) or 0
+        cons_val = clamp(active_days_90 / 15 * 100)
+        cons_reason = (
+            f"No contest attended in last 90 days. Active practice days: {active_days_90}/15. "
+            f"Consistency = {cons_val:.1f}/100."
+        )
 
     # ── VELOCITY ──
     # Penalise wrong answers during contests
