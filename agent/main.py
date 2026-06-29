@@ -87,14 +87,12 @@ class ScoreBreakdown(BaseModel):
     overall_score: int = Field(ge=0, le=100)
     dsa_strength: str
     competitive_programming: str
-    open_source: str
     interview_readiness: str
     faang_readiness: str
 
 class SkillsRadar(BaseModel):
     dsa: int = Field(ge=0, le=100)
     cp: int = Field(ge=0, le=100)
-    open_source: int = Field(ge=0, le=100)
     consistency: int = Field(ge=0, le=100)
     interview: int = Field(ge=0, le=100)
 
@@ -1425,7 +1423,6 @@ def compute_scores_and_analysis(
         overall_score=int(clamp(overall)),
         dsa_strength=label(dsa_score),
         competitive_programming=label(cp_score),
-        open_source="none",
         interview_readiness=readiness(interview_score),
         faang_readiness=readiness(min(interview_score, dsa_score, cp_score)),
     )
@@ -1433,7 +1430,6 @@ def compute_scores_and_analysis(
     radar = SkillsRadar(
         dsa=dsa_score,
         cp=cp_score,
-        open_source=0,
         consistency=int(consistency),
         interview=interview_score,
     )
@@ -1480,7 +1476,7 @@ def compute_scores_and_analysis(
             if ps.velocity.score < 40:
                 weaknesses.append(f"Low velocity/accuracy on {ps.platform} (score: {ps.velocity.score:.0f}/100) — focus on quality over quantity")
 
-    weaknesses.append("Limited open source presence — projects demonstrate real-world skills")
+
 
     if hard < 10:
         recommended_topics += ["Dynamic Programming", "Graph Algorithms"]
@@ -1500,7 +1496,7 @@ def compute_scores_and_analysis(
         next_steps.append("Start participating in Codeforces or CodeChef contests weekly")
     elif max_rating < 1400:
         next_steps.append(f"Push contest rating from {max_rating} toward 1400+")
-    next_steps.append("Start 2-3 meaningful personal projects on GitHub")
+
 
     diff_parts = []
     if easy: diff_parts.append(f"{easy}E")

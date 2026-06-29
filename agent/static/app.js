@@ -523,11 +523,10 @@
     const ctx = $("#radar-chart").getContext("2d");
     if (radarChart) radarChart.destroy();
 
-    const labels = ["DSA", "CP", "Open Source", "Consistency", "Interview"];
+    const labels = ["DSA", "CP", "Consistency", "Interview"];
     const values = [
       radar.dsa ?? 0,
       radar.cp ?? 0,
-      radar.open_source ?? 0,
       radar.consistency ?? 0,
       radar.interview ?? 0,
     ];
@@ -961,7 +960,6 @@
     const items = [
       ["DSA Strength", scores.dsa_strength],
       ["Competitive Programming", scores.competitive_programming],
-      ["Open Source", scores.open_source],
       ["Interview Readiness", scores.interview_readiness],
       ["FAANG Readiness", scores.faang_readiness],
     ];
