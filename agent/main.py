@@ -913,7 +913,7 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     extra = profile.extra or {}
     
     # ── CLOUT ──
-    # Contest Rating (0..3000 → 0..50) + Global Rank contribution (0..30) + Hard Solved (0..20)
+    # Contest Rating (0..2000 → 0..50) + Global Rank contribution (0..30) + Hard Solved (0..15) [College Scale]
     contest_rating = profile.contest_rating or 0
     hard_solved = extra.get("hard_solved", 0) or 0
     global_rank = extra.get("global_rank") or profile.rank or None
@@ -921,7 +921,7 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     if not total_participants:
         total_participants = 1000000 if extra.get("global_rank") else 3000000
 
-    clout_rating = clamp(contest_rating / 3000 * 50)
+    clout_rating = clamp(contest_rating / 2000 * 50)
     
     if global_rank and total_participants > 0:
         rank_pct = global_rank / total_participants
@@ -929,7 +929,7 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     else:
         clout_rank = 0.0
 
-    clout_hard = clamp(hard_solved / 50 * 20)  # 50 hard = full 20 pts
+    clout_hard = clamp(hard_solved / 15 * 20)  # 15 hard = full 20 pts (College Scale)
     clout_val = clamp(clout_rating + clout_rank + clout_hard)
 
     clout_reason = (
@@ -948,7 +948,7 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     
     # High mean + low CV = good consistency
     active_months = sum(1 for m in monthly if m > 0)
-    cons_base = clamp(active_months / 12 * 60)  # Up to 60 pts for active months
+    cons_base = clamp(active_months / 6 * 60)  # Up to 60 pts for active months (6 months = full, College Scale)
     
     # Penalise high standard deviation (irregular pattern)
     cv = sigma / (mu + 1e-9)
@@ -956,7 +956,7 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     cons_val = clamp(cons_base - cons_penalty + mu * 5)
 
     cons_reason = (
-        f"Active months: {active_months}/12 → {cons_base:.1f}/60 base pts. "
+        f"Active months: {active_months}/6 → {cons_base:.1f}/60 base pts. "
         f"Monthly mean {mu:.2f}, std {sigma:.2f}, CV {cv:.2f} → penalty {cons_penalty:.1f}. "
         f"Final consistency: {cons_val:.1f}/100."
     )
@@ -975,7 +975,7 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
         accept_rate = 0.0
 
     vel_acceptance = clamp(accept_rate * 60)
-    vel_volume = clamp(solved / 400 * 40)  # 400 solved = full 40 pts
+    vel_volume = clamp(solved / 150 * 40)  # 150 solved = full 40 pts (College Scale)
     vel_val = clamp(vel_acceptance + vel_volume)
 
     vel_reason = (
@@ -988,9 +988,9 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     return PlatformScore(
         platform="LeetCode",
         weight=PLATFORM_WEIGHTS["LeetCode"],
-        clout=SubScoreExplanation(raw_value=contest_rating, score=round(clout_val, 2), formula="0.4 × (ContestRating/3000×50 + RankPct×30 + HardSolved/50×20)", reasoning=clout_reason),
-        consistency=SubScoreExplanation(raw_value=mu, score=round(cons_val, 2), formula="ActiveMonths/12×60 − CV×20 + μ×5", reasoning=cons_reason),
-        velocity=SubScoreExplanation(raw_value=accept_rate, score=round(vel_val, 2), formula="AcceptRate×60 + Solved/400×40", reasoning=vel_reason),
+        clout=SubScoreExplanation(raw_value=contest_rating, score=round(clout_val, 2), formula="0.4 × (ContestRating/2000×50 + RankPct×30 + HardSolved/15×20)", reasoning=clout_reason),
+        consistency=SubScoreExplanation(raw_value=mu, score=round(cons_val, 2), formula="ActiveMonths/6×60 − CV×20 + μ×5", reasoning=cons_reason),
+        velocity=SubScoreExplanation(raw_value=accept_rate, score=round(vel_val, 2), formula="AcceptRate×60 + Solved/150×40", reasoning=vel_reason),
         platform_score=round(platform_score, 2),
         reasoning=f"LeetCode platform score: {platform_score:.1f}/100 (Clout {clout_val:.1f}, Consistency {cons_val:.1f}, Velocity {vel_val:.1f})"
     )
@@ -1000,19 +1000,18 @@ def score_codeforces(profile: ScraperOutput) -> PlatformScore:
     extra = profile.extra or {}
     
     # ── CLOUT ──
-    # Elo rating is the primary signal. CF ratings go 0..3500+
+    # Elo rating is the primary signal. CF ratings go 0..1800+ [College Scale]
     max_rating = extra.get("max_rating") or profile.rating or 0
-    # Clout = min(max_rating / 3500, 1) * 100
-    clout_val = clamp(max_rating / 3500 * 100)
+    clout_val = clamp(max_rating / 1800 * 100)
     clout_reason = (
-        f"Max rating {max_rating} on Codeforces (scale 0–3500). "
-        f"Clout = {max_rating}/3500 × 100 = {clout_val:.1f}/100."
+        f"Max rating {max_rating} on Codeforces (scale 0–1800). "
+        f"Clout = {max_rating}/1800 × 100 = {clout_val:.1f}/100."
     )
 
     # ── CONSISTENCY ──
-    # C_90 = contests in last 90 days. C_target = 6 (highly active)
+    # C_90 = contests in last 90 days. C_target = 3 (College Scale)
     c_90 = extra.get("contests_last_90", 0) or 0
-    c_target = 6
+    c_target = 3
     if c_90 > 0:
         cons_val = clamp(c_90 / c_target * 100)
         cons_reason = (
@@ -1020,11 +1019,11 @@ def score_codeforces(profile: ScraperOutput) -> PlatformScore:
             f"Consistency = {c_90}/{c_target} × 100 = {cons_val:.1f}/100."
         )
     else:
-        # Fallback to practice active days in last 90 days (15 active days = 100% consistency)
+        # Fallback to practice active days in last 90 days (8 active days = 100% consistency) [College Scale]
         active_days_90 = extra.get("active_days_90", 0) or 0
-        cons_val = clamp(active_days_90 / 15 * 100)
+        cons_val = clamp(active_days_90 / 8 * 100)
         cons_reason = (
-            f"No contest attended in last 90 days. Active practice days: {active_days_90}/15. "
+            f"No contest attended in last 90 days. Active practice days: {active_days_90}/8. "
             f"Consistency = {cons_val:.1f}/100."
         )
 
@@ -1046,8 +1045,8 @@ def score_codeforces(profile: ScraperOutput) -> PlatformScore:
     return PlatformScore(
         platform="Codeforces",
         weight=PLATFORM_WEIGHTS["Codeforces"],
-        clout=SubScoreExplanation(raw_value=max_rating, score=round(clout_val, 2), formula="MaxRating / 3500 × 100", reasoning=clout_reason),
-        consistency=SubScoreExplanation(raw_value=c_90, score=round(cons_val, 2), formula="C_90 / C_target(6) × 100", reasoning=cons_reason),
+        clout=SubScoreExplanation(raw_value=max_rating, score=round(clout_val, 2), formula="MaxRating / 1800 × 100", reasoning=clout_reason),
+        consistency=SubScoreExplanation(raw_value=c_90, score=round(cons_val, 2), formula="C_90 / C_target(3) × 100", reasoning=cons_reason),
         velocity=SubScoreExplanation(raw_value=wrong_per_contest, score=round(vel_val, 2), formula="100 − (WrongDuringContests / TotalContests) × 5", reasoning=vel_reason),
         platform_score=round(platform_score, 2),
         reasoning=f"Codeforces platform score: {platform_score:.1f}/100 (Clout {clout_val:.1f}, Consistency {cons_val:.1f}, Velocity {vel_val:.1f})"
@@ -1058,27 +1057,25 @@ def score_codechef(profile: ScraperOutput) -> PlatformScore:
     extra = profile.extra or {}
     
     # ── CLOUT ──
-    # Stars (1–7) + global rank ceiling
+    # Stars (1–5 = 100%) + global rank ceiling [College Scale]
     stars = extra.get("stars") or 0
     rating = profile.rating or 0
     global_rank = extra.get("global_rank") or None
     
-    # Stars give a tier bonus (1 star = 14%, 7 stars = 100%)
-    stars_contribution = clamp(stars / 7 * 60)
-    # Rating contribution  
-    rating_contribution = clamp(rating / 3000 * 40) if rating > 0 else 0
+    stars_contribution = clamp(stars / 5 * 60)
+    rating_contribution = clamp(rating / 1800 * 40) if rating > 0 else 0
     clout_val = clamp(stars_contribution + rating_contribution)
     clout_reason = (
-        f"Stars: {stars}/7 → {stars_contribution:.1f}/60 pts. "
+        f"Stars: {stars}/5 → {stars_contribution:.1f}/60 pts. "
         f"Rating: {rating} → {rating_contribution:.1f}/40 pts. "
         f"Total clout: {clout_val:.1f}/100."
     )
 
     # ── CONSISTENCY ──
-    # Problem solving presence. We use solved count as proxy.
+    # Problem solving presence (100 solved = full score) [College Scale]
     solved = profile.solved_count or 0
-    cons_val = clamp(solved / 200 * 100)  # 200 solved = full score
-    cons_reason = f"Total problems solved: {solved} (200 = full score). Consistency: {cons_val:.1f}/100."
+    cons_val = clamp(solved / 100 * 100)
+    cons_reason = f"Total problems solved: {solved} (100 = full score). Consistency: {cons_val:.1f}/100."
 
     # ── VELOCITY ──
     # Full vs partial completion ratio
@@ -1100,8 +1097,8 @@ def score_codechef(profile: ScraperOutput) -> PlatformScore:
     return PlatformScore(
         platform="CodeChef",
         weight=PLATFORM_WEIGHTS["CodeChef"],
-        clout=SubScoreExplanation(raw_value=rating, score=round(clout_val, 2), formula="Stars/7×60 + Rating/3000×40", reasoning=clout_reason),
-        consistency=SubScoreExplanation(raw_value=solved, score=round(cons_val, 2), formula="Solved / 200 × 100", reasoning=cons_reason),
+        clout=SubScoreExplanation(raw_value=rating, score=round(clout_val, 2), formula="Stars/5×60 + Rating/1800×40", reasoning=clout_reason),
+        consistency=SubScoreExplanation(raw_value=solved, score=round(cons_val, 2), formula="Solved / 100 × 100", reasoning=cons_reason),
         velocity=SubScoreExplanation(raw_value=full_ratio, score=round(vel_val, 2), formula="FullySolved / (Fully + Partially) × 100", reasoning=vel_reason),
         platform_score=round(platform_score, 2),
         reasoning=f"CodeChef platform score: {platform_score:.1f}/100 (Clout {clout_val:.1f}, Consistency {cons_val:.1f}, Velocity {vel_val:.1f})"
@@ -1112,13 +1109,13 @@ def score_hackerrank(profile: ScraperOutput) -> PlatformScore:
     extra = profile.extra or {}
     
     # ── CLOUT ──
-    # Badge star counts — sum and normalise against a realistic cap of 12 stars
+    # Badge star counts — sum and normalise against a realistic cap of 6 stars [College Scale]
     badge_stars = extra.get("badge_stars") or []
     total_badge_stars = sum(badge_stars)
-    clout_val = clamp(total_badge_stars / 12 * 100)
+    clout_val = clamp(total_badge_stars / 6 * 100)
     clout_reason = (
         f"Total badge stars across {len(badge_stars)} badges: {total_badge_stars} "
-        f"(max ~12). Clout: {clout_val:.1f}/100."
+        f"(max ~6). Clout: {clout_val:.1f}/100."
     )
 
     # ── CONSISTENCY ──
@@ -1135,17 +1132,17 @@ def score_hackerrank(profile: ScraperOutput) -> PlatformScore:
     
     days_active_cap = min(365, days_active)
     score_per_day = total_score / days_active_cap if days_active_cap > 0 else 0
-    cons_val = clamp(score_per_day * 10)  # 10 points/day = full score
+    cons_val = clamp(score_per_day * 15)  # 6.6 points/day = full score [College Scale]
     cons_reason = (
         f"Total HackerRank score: {total_score}. Account age: {days_active} days (capped at 365 for practice consistency). "
         f"Score/day = {score_per_day:.2f}. Consistency: {cons_val:.1f}/100."
     )
 
     # ── VELOCITY ──
-    # Sum solved count from badges, proxy perfect challenges as 75% of solved challenges
+    # Sum solved count from badges, proxy perfect challenges as 75% of solved challenges (10 perfect = full score)
     solved_count = profile.solved_count or 0
     perfect = max(1, int(solved_count * 0.75)) if solved_count > 0 else 0
-    vel_val = clamp(perfect / 20 * 100)  # 20 perfect = full score
+    vel_val = clamp(perfect / 10 * 100)  # 10 perfect = full score [College Scale]
     vel_reason = f"Perfect challenges: {perfect} (derived as 75% of {solved_count} solved). Velocity: {vel_val:.1f}/100."
 
     platform_score = clamp(clout_val * 0.4 + cons_val * 0.3 + vel_val * 0.3)
@@ -1153,9 +1150,9 @@ def score_hackerrank(profile: ScraperOutput) -> PlatformScore:
     return PlatformScore(
         platform="HackerRank",
         weight=PLATFORM_WEIGHTS["HackerRank"],
-        clout=SubScoreExplanation(raw_value=total_badge_stars, score=round(clout_val, 2), formula="TotalBadgeStars / 12 × 100", reasoning=clout_reason),
-        consistency=SubScoreExplanation(raw_value=score_per_day, score=round(cons_val, 2), formula="TotalScore / min(365, DaysActive) × 10", reasoning=cons_reason),
-        velocity=SubScoreExplanation(raw_value=perfect, score=round(vel_val, 2), formula="PerfectChallenges (75% of solved) / 20 × 100", reasoning=vel_reason),
+        clout=SubScoreExplanation(raw_value=total_badge_stars, score=round(clout_val, 2), formula="TotalBadgeStars / 6 × 100", reasoning=clout_reason),
+        consistency=SubScoreExplanation(raw_value=score_per_day, score=round(cons_val, 2), formula="TotalScore / min(365, DaysActive) × 15", reasoning=cons_reason),
+        velocity=SubScoreExplanation(raw_value=perfect, score=round(vel_val, 2), formula="PerfectChallenges (75% of solved) / 10 × 100", reasoning=vel_reason),
         platform_score=round(platform_score, 2),
         reasoning=f"HackerRank platform score: {platform_score:.1f}/100 (Clout {clout_val:.1f}, Consistency {cons_val:.1f}, Velocity {vel_val:.1f})"
     )
