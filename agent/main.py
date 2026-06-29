@@ -1537,6 +1537,17 @@ def compute_scores_and_analysis(
 
 # ─── FastAPI Endpoints ────────────────────────────────────────────────────────
 
+def clean_url(url: Optional[str]) -> Optional[str]:
+    if not url:
+        return None
+    val = str(url).strip()
+    if val.lower() in ("", "nan", "—", "n/a", "null", "none", "-", "—"):
+        return None
+    # Ensure it looks like a valid URL or path
+    if not ("http" in val or "." in val):
+        return None
+    return val
+
 @app.post("/analyze", response_model=ProfileResponse)
 async def analyze_profiles(request: Request):
     try:
@@ -1548,25 +1559,40 @@ async def analyze_profiles(request: Request):
 
     query = ProfileQuery(
         student_name=payload.get("student_name"),
-        leetcode=payload.get("leetcode"),
-        codeforces=payload.get("codeforces"),
-        codechef=payload.get("codechef"),
-        hackerrank=payload.get("hackerrank"),
+        leetcode=clean_url(payload.get("leetcode")),
+        codeforces=clean_url(payload.get("codeforces")),
+        codechef=clean_url(payload.get("codechef")),
+        hackerrank=clean_url(payload.get("hackerrank")),
     )
 
     profiles: List[ScraperOutput] = []
 
     if query.leetcode:
-        profiles.append(await scrape_leetcode(str(query.leetcode)))
+        try:
+            profiles.append(await scrape_leetcode(str(query.leetcode)))
+        except Exception as e:
+            print(f"Warning: failed to scrape LeetCode profile {query.leetcode}: {e}")
+            
     if query.codeforces:
-        profiles.append(await scrape_codeforces(str(query.codeforces)))
+        try:
+            profiles.append(await scrape_codeforces(str(query.codeforces)))
+        except Exception as e:
+            print(f"Warning: failed to scrape Codeforces profile {query.codeforces}: {e}")
+            
     if query.codechef:
-        profiles.append(await scrape_codechef(str(query.codechef)))
+        try:
+            profiles.append(await scrape_codechef(str(query.codechef)))
+        except Exception as e:
+            print(f"Warning: failed to scrape CodeChef profile {query.codechef}: {e}")
+            
     if query.hackerrank:
-        profiles.append(await scrape_hackerrank(str(query.hackerrank)))
+        try:
+            profiles.append(await scrape_hackerrank(str(query.hackerrank)))
+        except Exception as e:
+            print(f"Warning: failed to scrape HackerRank profile {query.hackerrank}: {e}")
 
     if not profiles:
-        raise HTTPException(status_code=400, detail="At least one profile URL is required")
+        raise HTTPException(status_code=400, detail="Failed to scrape any valid profile. Please verify your profile URLs.")
 
     # Run CP-Agent scoring engine
     cp_scoring = compute_cp_scoring(profiles)
