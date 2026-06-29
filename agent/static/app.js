@@ -29,10 +29,6 @@
     codeforces:     { label: "Codeforces",    emoji: "🔵", color: "#3b82f6" },
     codechef:       { label: "CodeChef",      emoji: "🟣", color: "#a855f7" },
     hackerrank:     { label: "HackerRank",    emoji: "🟢", color: "#10b981" },
-    geeksforgeeks:  { label: "GeeksForGeeks", emoji: "🌿", color: "#2f8d46" },
-    atcoder:        { label: "AtCoder",       emoji: "🔷", color: "#06b6d4" },
-    spoj:           { label: "SPOJ",          emoji: "🔴", color: "#ef4444" },
-    hackerearth:    { label: "HackerEarth",   emoji: "🟠", color: "#f97316" },
   };
 
   // ── Helpers ──
@@ -275,7 +271,6 @@
           let lcScore = "—";
           let ccScore = "—";
           let hrScore = "—";
-          let gfgScore = "—";
           
           const profiles = data.profiles || [];
           for (const p of profiles) {
@@ -290,8 +285,6 @@
               if (p.rating) ccScore += ` (Rating: ${p.rating})`;
             } else if (p.platform === "HackerRank") {
               hrScore = `${p.solved_count || 0} solved`;
-            } else if (p.platform === "GeeksForGeeks") {
-              gfgScore = `${p.solved_count || 0} solved`;
             }
           }
           
@@ -309,7 +302,6 @@
             <td>${cfScore}</td>
             <td>${ccScore}</td>
             <td>${hrScore}</td>
-            <td>${gfgScore}</td>
             <td>
               <button class="action-btn" onclick="window.viewRecord('${current.student_name}')">View Details</button>
             </td>
@@ -809,7 +801,6 @@
       let sumCF_solved = 0, countCF_solved = 0;
       let sumCC_solved = 0, countCC_solved = 0;
       let sumHR_solved = 0, countHR_solved = 0;
-      let sumGFG_solved = 0, countGFG_solved = 0;
       
       processedResults.forEach(res => {
         const profiles = res.data.profiles || [];
@@ -826,9 +817,6 @@
           } else if (p.platform === "HackerRank") {
             sumHR_solved += (p.solved_count || 0);
             countHR_solved++;
-          } else if (p.platform === "GeeksForGeeks") {
-            sumGFG_solved += (p.solved_count || 0);
-            countGFG_solved++;
           }
         });
       });
@@ -837,16 +825,15 @@
       const avgCF = countCF_solved ? Math.round(sumCF_solved / countCF_solved) : 0;
       const avgCC = countCC_solved ? Math.round(sumCC_solved / countCC_solved) : 0;
       const avgHR = countHR_solved ? Math.round(sumHR_solved / countHR_solved) : 0;
-      const avgGFG = countGFG_solved ? Math.round(sumGFG_solved / countGFG_solved) : 0;
 
       bulkBarChart = new Chart(barCtx, {
         type: "bar",
         data: {
-          labels: ["LeetCode", "Codeforces", "CodeChef", "HackerRank", "GeeksForGeeks"],
+          labels: ["LeetCode", "Codeforces", "CodeChef", "HackerRank"],
           datasets: [{
             label: "Avg Solved",
-            data: [avgLC, avgCF, avgCC, avgHR, avgGFG],
-            backgroundColor: ["#f59e0b", "#3b82f6", "#a855f7", "#10b981", "#2f8d46"],
+            data: [avgLC, avgCF, avgCC, avgHR],
+            backgroundColor: ["#f59e0b", "#3b82f6", "#a855f7", "#10b981"],
             borderWidth: 0,
             borderRadius: 4
           }]
@@ -904,7 +891,6 @@
       Codeforces: '#3b82f6',
       CodeChef: '#a855f7',
       HackerRank: '#10b981',
-      GeeksForGeeks: '#2f8d46',
     };
 
     cpScoring.platform_scores.forEach(ps => {

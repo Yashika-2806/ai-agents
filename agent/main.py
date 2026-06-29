@@ -41,10 +41,6 @@ class ProfileQuery(BaseModel):
     codeforces: Optional[str] = None
     codechef: Optional[str] = None
     hackerrank: Optional[str] = None
-    geeksforgeeks: Optional[str] = None
-    atcoder: Optional[str] = None
-    spoj: Optional[str] = None
-    hackerearth: Optional[str] = None
 
 class ScraperOutput(BaseModel):
     platform: str
@@ -808,11 +804,10 @@ async def scrape_hackerearth(url: str) -> ScraperOutput:
 # Final Score = Σ(weight_i × platform_score_i) with dynamic weight allocation
 
 PLATFORM_WEIGHTS = {
-    "LeetCode": 0.30,
-    "Codeforces": 0.25,
+    "LeetCode": 0.40,
+    "Codeforces": 0.30,
     "CodeChef": 0.20,
     "HackerRank": 0.10,
-    "GeeksForGeeks": 0.15,
 }
 
 def clamp(v: float, lo: float = 0.0, hi: float = 100.0) -> float:
@@ -1126,7 +1121,6 @@ SCORERS = {
     "Codeforces": score_codeforces,
     "CodeChef": score_codechef,
     "HackerRank": score_hackerrank,
-    "GeeksForGeeks": score_geeksforgeeks,
 }
 
 def compute_cp_scoring(profiles: List[ScraperOutput]) -> ScoringResult:
@@ -1277,7 +1271,7 @@ def compute_scores_and_analysis(
     contest_ratings = [p.contest_rating for p in profiles if p.contest_rating is not None]
     max_contest = max(contest_ratings) if contest_ratings else 0
 
-    has_cp = any(p.platform in ("Codeforces", "AtCoder", "CodeChef") and p.rating is not None for p in profiles)
+    has_cp = any(p.platform in ("Codeforces", "CodeChef") and p.rating is not None for p in profiles)
     platform_count = len(profiles)
 
     # Use CP scoring engine's final score as the base if available
@@ -1407,7 +1401,7 @@ def compute_scores_and_analysis(
     if total_solved < 150:
         next_steps.append(f"Push total solved count from {total_solved} toward {total_solved + 50}")
     if not has_cp:
-        next_steps.append("Start participating in Codeforces or AtCoder contests weekly")
+        next_steps.append("Start participating in Codeforces or CodeChef contests weekly")
     elif max_rating < 1400:
         next_steps.append(f"Push contest rating from {max_rating} toward 1400+")
     next_steps.append("Start 2-3 meaningful personal projects on GitHub")
@@ -1459,10 +1453,6 @@ async def analyze_profiles(request: Request):
         codeforces=payload.get("codeforces"),
         codechef=payload.get("codechef"),
         hackerrank=payload.get("hackerrank"),
-        geeksforgeeks=payload.get("geeksforgeeks"),
-        atcoder=payload.get("atcoder"),
-        spoj=payload.get("spoj"),
-        hackerearth=payload.get("hackerearth"),
     )
 
     profiles: List[ScraperOutput] = []
@@ -1475,14 +1465,6 @@ async def analyze_profiles(request: Request):
         profiles.append(await scrape_codechef(str(query.codechef)))
     if query.hackerrank:
         profiles.append(await scrape_hackerrank(str(query.hackerrank)))
-    if query.geeksforgeeks:
-        profiles.append(await scrape_geeksforgeeks(str(query.geeksforgeeks)))
-    if query.atcoder:
-        profiles.append(await scrape_atcoder(str(query.atcoder)))
-    if query.spoj:
-        profiles.append(await scrape_spoj(str(query.spoj)))
-    if query.hackerearth:
-        profiles.append(await scrape_hackerearth(str(query.hackerearth)))
 
     if not profiles:
         raise HTTPException(status_code=400, detail="At least one profile URL is required")
