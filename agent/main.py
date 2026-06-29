@@ -1112,18 +1112,17 @@ def score_hackerrank(profile: ScraperOutput) -> PlatformScore:
     extra = profile.extra or {}
     
     # ── CLOUT ──
-    # Badge star counts — sum and normalise
+    # Badge star counts — sum and normalise against a realistic cap of 12 stars
     badge_stars = extra.get("badge_stars") or []
     total_badge_stars = sum(badge_stars)
-    # Max possible: ~10 badges × 5 stars = 50 stars → scale to 100
-    clout_val = clamp(total_badge_stars / 50 * 100)
+    clout_val = clamp(total_badge_stars / 12 * 100)
     clout_reason = (
         f"Total badge stars across {len(badge_stars)} badges: {total_badge_stars} "
-        f"(max ~50). Clout: {clout_val:.1f}/100."
+        f"(max ~12). Clout: {clout_val:.1f}/100."
     )
 
     # ── CONSISTENCY ──
-    # Total score / account lifespan
+    # Total score / account lifespan (capped at 365 days to avoid penalising older accounts)
     total_score = extra.get("total_score") or 0
     created_at = extra.get("created_at")
     days_active = 365
@@ -1134,27 +1133,29 @@ def score_hackerrank(profile: ScraperOutput) -> PlatformScore:
         except Exception:
             pass
     
-    score_per_day = total_score / days_active if days_active > 0 else 0
+    days_active_cap = min(365, days_active)
+    score_per_day = total_score / days_active_cap if days_active_cap > 0 else 0
     cons_val = clamp(score_per_day * 10)  # 10 points/day = full score
     cons_reason = (
-        f"Total HackerRank score: {total_score}. Account age: {days_active} days. "
+        f"Total HackerRank score: {total_score}. Account age: {days_active} days (capped at 365 for practice consistency). "
         f"Score/day = {score_per_day:.2f}. Consistency: {cons_val:.1f}/100."
     )
 
     # ── VELOCITY ──
-    # Perfect challenges
-    perfect = extra.get("perfect_challenges") or 0
+    # Sum solved count from badges, proxy perfect challenges as 75% of solved challenges
+    solved_count = profile.solved_count or 0
+    perfect = max(1, int(solved_count * 0.75)) if solved_count > 0 else 0
     vel_val = clamp(perfect / 20 * 100)  # 20 perfect = full score
-    vel_reason = f"Perfect challenges: {perfect} (target 20 = full score). Velocity: {vel_val:.1f}/100."
+    vel_reason = f"Perfect challenges: {perfect} (derived as 75% of {solved_count} solved). Velocity: {vel_val:.1f}/100."
 
     platform_score = clamp(clout_val * 0.4 + cons_val * 0.3 + vel_val * 0.3)
 
     return PlatformScore(
         platform="HackerRank",
         weight=PLATFORM_WEIGHTS["HackerRank"],
-        clout=SubScoreExplanation(raw_value=total_badge_stars, score=round(clout_val, 2), formula="TotalBadgeStars / 50 × 100", reasoning=clout_reason),
-        consistency=SubScoreExplanation(raw_value=score_per_day, score=round(cons_val, 2), formula="TotalScore / DaysActive × 10", reasoning=cons_reason),
-        velocity=SubScoreExplanation(raw_value=perfect, score=round(vel_val, 2), formula="PerfectChallenges / 20 × 100", reasoning=vel_reason),
+        clout=SubScoreExplanation(raw_value=total_badge_stars, score=round(clout_val, 2), formula="TotalBadgeStars / 12 × 100", reasoning=clout_reason),
+        consistency=SubScoreExplanation(raw_value=score_per_day, score=round(cons_val, 2), formula="TotalScore / min(365, DaysActive) × 10", reasoning=cons_reason),
+        velocity=SubScoreExplanation(raw_value=perfect, score=round(vel_val, 2), formula="PerfectChallenges (75% of solved) / 20 × 100", reasoning=vel_reason),
         platform_score=round(platform_score, 2),
         reasoning=f"HackerRank platform score: {platform_score:.1f}/100 (Clout {clout_val:.1f}, Consistency {cons_val:.1f}, Velocity {vel_val:.1f})"
     )
