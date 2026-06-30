@@ -330,6 +330,7 @@ async def fetch_codeforces_status(handle: str) -> Dict[str, Any]:
     page_size = 1000
     wrong_during_contest = 0
 
+    all_results = []
     async with httpx.AsyncClient(timeout=30.0) as client:
         while True:
             url = f"https://codeforces.com/api/user.status?handle={handle}&from={start}&count={page_size}"
@@ -350,6 +351,7 @@ async def fetch_codeforces_status(handle: str) -> Dict[str, Any]:
                 raise HTTPException(status_code=502, detail=f"Codeforces API error: {data.get('comment')}")
 
             results = data.get("result", [])
+            all_results.extend(results)
             for item in results:
                 verdict = item.get("verdict")
                 if verdict:
@@ -376,10 +378,10 @@ async def fetch_codeforces_status(handle: str) -> Dict[str, Any]:
             if start > 20000:
                 break
 
-    # Calculate active practice days in last 90 days
+    # Calculate active practice days in last 90 days from ALL submissions
     now_ts = datetime.now(timezone.utc).timestamp()
     active_days_90 = set()
-    for item in results:
+    for item in all_results:
         creation_time = item.get("creationTimeSeconds")
         if creation_time and (now_ts - creation_time) <= 90 * 86400:
             dt = datetime.fromtimestamp(creation_time, tz=timezone.utc)
@@ -948,10 +950,10 @@ def score_leetcode(profile: ScraperOutput) -> PlatformScore:
     active_months = sum(1 for m in monthly if m > 0)
     cons_base = clamp(active_months / 6 * 60)  # Up to 60 pts for active months (6 months = full, College Scale)
     
-    # Penalise high standard deviation (irregular pattern)
-    cv = sigma / (mu + 1e-9)
-    cons_penalty = clamp(cv * 20, 0, 20)
-    cons_val = clamp(cons_base - cons_penalty + mu * 5)
+    # Penalise high standard deviation (irregular pattern) but avoid wiping out score for low active months
+    cv = sigma / (mu + 1e-9) if mu > 0 else 0
+    cons_penalty = clamp(cv * 5, 0, 10) if active_months > 1 else 0
+    cons_val = clamp(cons_base - cons_penalty + mu * 3)
 
     cons_reason = (
         f"Active months: {active_months}/6 → {cons_base:.1f}/60 base pts. "
